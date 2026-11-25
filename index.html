@@ -1,0 +1,3656 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SUPER MINI GAMES — Arcade Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #070913;
+      --bg-card: #101528;
+      --accent-cyan: #00f0ff;
+      --accent-pink: #ff2a85;
+      --accent-gold: #ffd13b;
+      --accent-purple: #8b5cf6;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-deep);
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    .font-arcade {
+      font-family: 'Orbitron', sans-serif;
+    }
+    #bgCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .glass-panel {
+      background: rgba(16, 21, 40, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .game-card {
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .game-card:hover {
+      transform: translateY(-6px) scale(1.015);
+      box-shadow: 0 18px 36px -12px rgba(0, 240, 255, 0.28);
+      border-color: rgba(0, 240, 255, 0.45);
+    }
+    .neon-glow-cyan {
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+    }
+    .neon-glow-gold {
+      box-shadow: 0 0 18px rgba(255, 209, 59, 0.35);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #070913;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    /* Toast Animation */
+    @keyframes slideInRight {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .toast-enter {
+      animation: slideInRight 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    #gameCanvas {
+      touch-action: none;
+      display: block;
+    }
+  </style>
+</head>
+<body class="min-h-screen relative selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- Animated Particle & Perspective Grid Background -->
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-xs w-full"></div>
+
+  <!-- MAIN APPLICATION SHELL -->
+  <div id="appShell" class="relative z-10 min-h-screen flex flex-col">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-30 glass-panel border-b border-slate-800/80 px-4 py-3">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+        <!-- Brand Logo -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="App.goHome()">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-600 to-fuchsia-600 flex items-center justify-center shadow-lg neon-glow-cyan">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="font-arcade text-lg sm:text-xl font-black tracking-wider bg-gradient-to-r from-cyan-300 via-white to-fuchsia-400 bg-clip-text text-transparent">
+              SUPER MINI GAMES
+            </h1>
+            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="sdkStatusBadge">Yandex SDK Ready</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Player Stats & Quick Actions -->
+        <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <!-- Player Level & XP Pill -->
+          <button onclick="App.openModal('profileModal')" class="flex items-center gap-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 rounded-xl px-3 py-1.5 transition">
+            <div id="headerAvatar" class="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-sm font-bold">
+              👾
+            </div>
+            <div class="text-left hidden sm:block">
+              <div class="flex items-center gap-1.5">
+                <span id="headerPlayerName" class="text-xs font-bold text-white">Player1</span>
+                <span id="headerLevelBadge" class="text-[10px] font-arcade font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">LVL 1</span>
+              </div>
+              <div class="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden mt-1">
+                <div id="headerXpBar" class="h-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 transition-all duration-300" style="width: 15%"></div>
+              </div>
+            </div>
+          </button>
+
+          <!-- Coins Balance -->
+          <button onclick="App.openModal('shopModal')" class="flex items-center gap-2 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 rounded-xl px-3 py-1.5 transition neon-glow-gold" title="Open Cosmetic Shop">
+            <span class="text-base">🪙</span>
+            <span id="headerCoins" class="font-arcade font-bold text-sm text-amber-300">0</span>
+          </button>
+
+          <!-- Daily Reward -->
+          <button id="dailyRewardBtn" onclick="App.claimDailyReward()" class="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs px-3 py-2 rounded-xl shadow-lg transition">
+            <span>🎁</span>
+            <span class="hidden md:inline">Daily Gift</span>
+          </button>
+
+          <!-- Shop Button -->
+          <button onclick="App.openModal('shopModal')" class="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-fuchsia-400 transition" title="Cosmetic Shop">
+            🛒
+          </button>
+
+          <!-- Achievements & Stats Button -->
+          <button onclick="App.openModal('statsModal')" class="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-amber-400 transition" title="Achievements & High Scores">
+            🏆
+          </button>
+
+          <!-- Sound Toggle -->
+          <button id="soundToggleBtn" onclick="SoundFX.toggleMute()" class="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-cyan-300 transition" title="Toggle Sound">
+            🔊
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- LOBBY / DASHBOARD VIEW -->
+    <main id="lobbyView" class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+
+      <!-- Hero Featured Banner: Flappy Bird + Arcade Highlight -->
+      <section class="relative overflow-hidden rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-slate-900 via-indigo-950/90 to-slate-900 p-6 sm:p-8 shadow-2xl">
+        <div class="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div class="space-y-3 max-w-2xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-xs font-semibold">
+              <span>🔥</span> 20 COMPLETE ARCADE MINI-GAMES • INSTANT PLAY
+            </div>
+            <h2 class="font-arcade text-2xl sm:text-4xl font-black text-white leading-tight">
+              PLAY, COLLECT COINS &amp; UNLOCK LEGENDARY SKINS
+            </h2>
+            <p class="text-slate-300 text-sm sm:text-base">
+              Dive into 20 distinct hand-crafted HTML5 games—from our flagship <span class="text-amber-300 font-semibold">Flappy Bird Coin Rush</span> to Tetris, 2048, Space Shooter, Car Racing, Knife Hit, and more!
+            </p>
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+              <button onclick="GameManager.launchGame('flappy')" class="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-arcade font-extrabold text-sm shadow-lg neon-glow-cyan transition transform hover:scale-105">
+                ▶ PLAY FLAPPY BIRD
+              </button>
+              <button onclick="GameManager.launchRandomGame()" class="px-5 py-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-600 text-white font-semibold text-sm transition">
+                🎲 Random Game
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Stats Card -->
+          <div class="grid grid-cols-3 gap-3 w-full lg:w-auto">
+            <div class="glass-panel rounded-2xl p-4 text-center">
+              <div class="text-2xl font-arcade font-black text-cyan-400" id="statGamesCount">20</div>
+              <div class="text-[11px] text-slate-400 uppercase tracking-wider mt-1">Mini Games</div>
+            </div>
+            <div class="glass-panel rounded-2xl p-4 text-center">
+              <div class="text-2xl font-arcade font-black text-amber-400" id="statTotalPlayed">0</div>
+              <div class="text-[11px] text-slate-400 uppercase tracking-wider mt-1">Matches</div>
+            </div>
+            <div class="glass-panel rounded-2xl p-4 text-center">
+              <div class="text-2xl font-arcade font-black text-fuchsia-400" id="statAchievementsCount">0/10</div>
+              <div class="text-[11px] text-slate-400 uppercase tracking-wider mt-1">Trophies</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recently Played Strip (Hidden if empty) -->
+      <section id="recentSection" class="hidden space-y-2.5">
+        <div class="flex items-center justify-between">
+          <h3 class="font-arcade text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <span>⏱️</span> Recently Played
+          </h3>
+        </div>
+        <div id="recentGamesRow" class="flex gap-3 overflow-x-auto pb-2"></div>
+      </section>
+
+      <!-- Search & Category Filters -->
+      <section class="glass-panel rounded-2xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <!-- Category Pills -->
+        <div id="categoryTabs" class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+          <button data-cat="All" class="cat-btn active px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 transition whitespace-nowrap">All (20)</button>
+          <button data-cat="Favorites" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">❤️ Favorites</button>
+          <button data-cat="Arcade" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">🕹️ Arcade</button>
+          <button data-cat="Action" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">🚀 Action</button>
+          <button data-cat="Puzzle" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">🧩 Puzzle</button>
+          <button data-cat="Sports" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">⚽ Sports</button>
+          <button data-cat="Classic" class="cat-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">🎲 Classic</button>
+        </div>
+
+        <!-- Search Box -->
+        <div class="relative w-full md:w-72">
+          <input id="searchInput" type="text" placeholder="Search 20 mini-games..." class="w-full bg-slate-900/90 border border-slate-700 focus:border-cyan-400 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-400 outline-none transition" />
+          <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </section>
+
+      <!-- 20 MINI-GAMES GRID -->
+      <section>
+        <div id="gamesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <!-- Dynamically populated with 20 game cards -->
+        </div>
+        <div id="emptySearchState" class="hidden text-center py-16 glass-panel rounded-3xl">
+          <div class="text-4xl mb-3">🔍</div>
+          <h4 class="font-arcade text-lg font-bold text-white">No mini-games found</h4>
+          <p class="text-slate-400 text-sm mt-1">Try clearing your search or switching categories.</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- ACTIVE GAME ARENA VIEW (Hidden while in Lobby) -->
+    <main id="gameArenaView" class="hidden flex-1 max-w-5xl w-full mx-auto px-3 sm:px-4 py-4 flex flex-col items-center justify-center">
+      <!-- Top Game Control Bar -->
+      <div class="w-full glass-panel rounded-2xl p-3 mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <button onclick="GameManager.exitToLobby()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 transition">
+            ← Lobby
+          </button>
+          <div>
+            <h2 id="activeGameTitle" class="font-arcade text-sm sm:text-base font-extrabold text-white">FLAPPY BIRD</h2>
+            <p id="activeGameHint" class="text-[11px] text-cyan-300">Tap / Click / SPACE to Flap</p>
+          </div>
+        </div>
+
+        <!-- Live Score & Best HUD -->
+        <div class="flex items-center gap-3">
+          <div class="bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-1.5 text-center">
+            <div class="text-[10px] text-slate-400 uppercase">Score</div>
+            <div id="hudScore" class="font-arcade font-bold text-sm sm:text-base text-cyan-300">0</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-1.5 text-center">
+            <div class="text-[10px] text-slate-400 uppercase">Best</div>
+            <div id="hudBest" class="font-arcade font-bold text-sm sm:text-base text-amber-300">0</div>
+          </div>
+          <div id="hudExtraBox" class="hidden bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-1.5 text-center">
+            <div id="hudExtraLabel" class="text-[10px] text-slate-400 uppercase">Coins</div>
+            <div id="hudExtraVal" class="font-arcade font-bold text-sm sm:text-base text-emerald-300">0</div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2">
+          <button id="gamePauseBtn" onclick="GameManager.togglePause()" class="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 font-bold text-xs transition">
+            ⏸ Pause
+          </button>
+          <button onclick="GameManager.restartCurrentGame()" class="px-3 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-300 font-bold text-xs transition">
+            ↻ Restart
+          </button>
+        </div>
+      </div>
+
+      <!-- Responsive Canvas Stage Container -->
+      <div id="canvasStage" class="relative w-full max-w-[760px] aspect-[4/3] sm:aspect-[16/10] max-h-[68vh] bg-slate-950 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center">
+        <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+        <!-- START OVERLAY -->
+        <div id="overlayStart" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
+          <div id="startIcon" class="text-5xl mb-3 animate-bounce">🐦</div>
+          <h3 id="startTitle" class="font-arcade text-2xl sm:text-3xl font-black text-white mb-2">FLAPPY BIRD</h3>
+          <p id="startDesc" class="text-slate-300 text-sm max-w-md mb-5">Fly through green pipes and collect spinning gold coins!</p>
+
+          <!-- Optional Skin Selector for supported games (e.g., Flappy Bird) -->
+          <div id="startSkinPicker" class="hidden mb-5">
+            <div class="text-xs text-slate-400 uppercase tracking-wider mb-2">Equipped Skin</div>
+            <div id="startSkinList" class="flex items-center justify-center gap-2 flex-wrap"></div>
+          </div>
+
+          <button onclick="GameManager.startCurrentGame()" class="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-arcade font-black text-base shadow-xl neon-glow-cyan transition transform hover:scale-105">
+            ▶ START GAME
+          </button>
+        </div>
+
+        <!-- PAUSE OVERLAY -->
+        <div id="overlayPause" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
+          <div class="text-4xl mb-2">⏸️</div>
+          <h3 class="font-arcade text-2xl font-black text-white mb-4">GAME PAUSED</h3>
+          <div class="flex gap-3">
+            <button onclick="GameManager.togglePause()" class="px-6 py-3 rounded-xl bg-cyan-400 text-slate-950 font-arcade font-bold text-sm">
+              ▶ RESUME
+            </button>
+            <button onclick="GameManager.restartCurrentGame()" class="px-6 py-3 rounded-xl bg-slate-800 text-white font-bold text-sm border border-slate-600">
+              ↻ RESTART
+            </button>
+          </div>
+        </div>
+
+        <!-- GAME OVER OVERLAY -->
+        <div id="overlayGameOver" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+          <div id="goBadge" class="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold uppercase mb-2">
+            Game Over
+          </div>
+          <h3 id="goTitle" class="font-arcade text-2xl sm:text-3xl font-black text-white mb-4">ROUND COMPLETE</h3>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full max-w-lg mb-6">
+            <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-3">
+              <div class="text-[10px] text-slate-400 uppercase">Score</div>
+              <div id="goScore" class="font-arcade text-lg font-black text-cyan-300">0</div>
+            </div>
+            <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-3">
+              <div class="text-[10px] text-slate-400 uppercase">Best</div>
+              <div id="goBest" class="font-arcade text-lg font-black text-amber-300">0</div>
+            </div>
+            <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-3">
+              <div class="text-[10px] text-slate-400 uppercase">Coins</div>
+              <div id="goCoins" class="font-arcade text-lg font-black text-yellow-400">+0</div>
+            </div>
+            <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-3">
+              <div class="text-[10px] text-slate-400 uppercase">XP</div>
+              <div id="goXp" class="font-arcade text-lg font-black text-fuchsia-400">+0</div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <button onclick="GameManager.restartCurrentGame()" class="px-7 py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-arcade font-black text-sm shadow-lg neon-glow-cyan transition transform hover:scale-105">
+              ↻ PLAY AGAIN
+            </button>
+            <button onclick="GameManager.exitToLobby()" class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-600 transition">
+              🏠 All Games
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DYNAMIC MOBILE / ON-SCREEN TOUCH CONTROLS BAR -->
+      <div id="mobileControlsBar" class="w-full max-w-[760px] mt-3 flex items-center justify-center gap-3 flex-wrap">
+        <!-- Dynamically injected per game (D-pad, Action buttons, Flag toggle, etc.) -->
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS (Cosmetic Shop, Player Profile, Achievements & High Scores) -->
+  <div id="modalBackdrop" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this) App.closeModals()">
+    
+    <!-- COSMETIC SHOP MODAL -->
+    <div id="shopModal" class="hidden glass-panel rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-fuchsia-500/30 shadow-2xl">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="font-arcade text-xl font-black text-white flex items-center gap-2">
+            <span>🛒</span> ARCADE SKIN SHOP
+          </h3>
+          <p class="text-xs text-slate-400">Spend your hard-earned coins to customize birds, snakes, paddles &amp; ships!</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/40 font-arcade font-bold text-sm text-amber-300">
+            🪙 <span id="shopCoinsDisplay">0</span>
+          </div>
+          <button onclick="App.closeModals()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold">✕</button>
+        </div>
+      </div>
+      <div id="shopItemsGrid" class="p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+
+    <!-- ACHIEVEMENTS & HIGH SCORES MODAL -->
+    <div id="statsModal" class="hidden glass-panel rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col border border-amber-500/30 shadow-2xl">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="font-arcade text-xl font-black text-white flex items-center gap-2">
+            <span>🏆</span> TROPHIES &amp; LEADERBOARD
+          </h3>
+          <p class="text-xs text-slate-400">Your personal records across all 20 mini-games</p>
+        </div>
+        <button onclick="App.closeModals()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold">✕</button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-6">
+        <!-- Achievements Section -->
+        <div>
+          <h4 class="font-arcade text-xs font-bold uppercase tracking-wider text-amber-300 mb-3">Achievements</h4>
+          <div id="achievementsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+        </div>
+        <!-- High Scores Table -->
+        <div>
+          <h4 class="font-arcade text-xs font-bold uppercase tracking-wider text-cyan-300 mb-3">High Scores (All 20 Games)</h4>
+          <div id="highScoresList" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYER PROFILE MODAL -->
+    <div id="profileModal" class="hidden glass-panel rounded-3xl max-w-md w-full border border-cyan-500/30 shadow-2xl p-6 space-y-5">
+      <div class="flex items-center justify-between">
+        <h3 class="font-arcade text-lg font-black text-white">PLAYER PROFILE</h3>
+        <button onclick="App.closeModals()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold">✕</button>
+      </div>
+      <div class="flex items-center gap-4">
+        <div id="profileAvatarBig" class="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-fuchsia-600 flex items-center justify-center text-3xl shadow-lg">
+          👾
+        </div>
+        <div class="flex-1">
+          <label class="text-[11px] text-slate-400 uppercase">Nickname</label>
+          <input id="profileNameInput" type="text" maxlength="16" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:border-cyan-400" />
+        </div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-400 mb-2">Choose Avatar</div>
+        <div id="avatarPicker" class="flex gap-2 flex-wrap">
+          <!-- Avatars -->
+        </div>
+      </div>
+      <div class="bg-slate-900/90 rounded-2xl p-4 space-y-2 border border-slate-800">
+        <div class="flex justify-between text-xs">
+          <span class="text-slate-400">Player Level</span>
+          <span id="profileLevelText" class="font-arcade font-bold text-cyan-300">Level 1</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+          <div id="profileXpBar" class="h-full bg-gradient-to-r from-cyan-400 to-fuchsia-500" style="width: 20%"></div>
+        </div>
+        <div class="flex justify-between text-[11px] text-slate-400 pt-1">
+          <span>Total Coins Earned: <strong id="profileTotalCoins" class="text-amber-300">0</strong></span>
+          <span>Games Played: <strong id="profileTotalGames" class="text-white">0</strong></span>
+        </div>
+      </div>
+      <button onclick="App.saveProfile()" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-arcade font-extrabold text-sm">
+        SAVE PROFILE
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT ARCHITECTURE: SDK, AUDIO, STORAGE, SHOP, & 20 MINI-GAMES   -->
+  <!-- ===================================================================== -->
+  <script>
+    "use strict";
+
+    /**
+     * 1. YANDEX GAMES SDK INTEGRATION-READY WRAPPER
+     * Safely initializes window.YaGames if running inside Yandex Games iframe,
+     * and seamlessly falls back to local storage & mock methods in standalone browsers.
+     */
+    const YandexSDK = {
+      ysdk: null,
+      player: null,
+      isReady: false,
+
+      async init() {
+        const badge = document.getElementById('sdkStatusBadge');
+        try {
+          if (typeof window.YaGames !== 'undefined' && window.YaGames.init) {
+            this.ysdk = await window.YaGames.init();
+            this.isReady = true;
+            if (badge) badge.textContent = 'Yandex Games Connected';
+            try {
+              this.player = await this.ysdk.getPlayer({ scopes: false });
+              if (this.player && this.player.getName()) {
+                StorageManager.state.profile.name = this.player.getName();
+                StorageManager.save();
+              }
+            } catch (e) {
+              // Guest mode player
+            }
+            if (this.ysdk.features && this.ysdk.features.LoadingAPI) {
+              this.ysdk.features.LoadingAPI.ready();
+            }
+          } else {
+            if (badge) badge.textContent = 'Web Arcade Mode (SDK Ready)';
+          }
+        } catch (err) {
+          console.warn('Yandex SDK fallback active:', err);
+          if (badge) badge.textContent = 'Offline / Local Mode';
+        }
+      },
+
+      showFullscreenAd(onClose) {
+        if (this.ysdk && this.ysdk.adv && this.ysdk.adv.showFullscreenAdv) {
+          this.ysdk.adv.showFullscreenAdv({
+            callbacks: {
+              onClose: () => { if (onClose) onClose(); },
+              onError: () => { if (onClose) onClose(); }
+            }
+          });
+        } else if (onClose) {
+          onClose();
+        }
+      },
+
+      submitLeaderboardScore(boardName, score) {
+        if (this.ysdk && this.ysdk.getLeaderboards) {
+          this.ysdk.getLeaderboards().then(lb => {
+            lb.setLeaderboardScore(boardName, score).catch(() => {});
+          }).catch(() => {});
+        }
+      }
+    };
+
+    /**
+     * 2. PROCEDURAL WEB AUDIO API SOUND SYNTHESIZER
+     * Zero external MP3 dependencies — generates crisp arcade SFX on the fly.
+     */
+    const SoundFX = {
+      ctx: null,
+      muted: false,
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      },
+
+      toggleMute() {
+        this.muted = !this.muted;
+        const btn = document.getElementById('soundToggleBtn');
+        if (btn) btn.textContent = this.muted ? '🔇' : '🔊';
+        StorageManager.state.muted = this.muted;
+        StorageManager.save();
+      },
+
+      play(type) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        switch (type) {
+          case 'jump':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(280, now);
+            osc.frequency.exponentialRampToValueAtTime(560, now + 0.12);
+            gain.gain.setValueAtTime(0.16, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+            osc.start(now);
+            osc.stop(now + 0.13);
+            break;
+          case 'coin':
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(987.77, now); // B5
+            osc.frequency.setValueAtTime(1318.51, now + 0.06); // E6
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            osc.start(now);
+            osc.stop(now + 0.22);
+            break;
+          case 'score':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.07);
+            gain.gain.setValueAtTime(0.14, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            osc.start(now);
+            osc.stop(now + 0.18);
+            break;
+          case 'hit':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(160, now);
+            osc.frequency.exponentialRampToValueAtTime(45, now + 0.22);
+            gain.gain.setValueAtTime(0.22, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
+            osc.start(now);
+            osc.stop(now + 0.23);
+            break;
+          case 'shoot':
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(760, now);
+            osc.frequency.exponentialRampToValueAtTime(210, now + 0.09);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            osc.start(now);
+            osc.stop(now + 0.09);
+            break;
+          case 'click':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+            break;
+          case 'win':
+            osc.type = 'triangle';
+            [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+              osc.frequency.setValueAtTime(freq, now + i * 0.08);
+            });
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+            break;
+        }
+      }
+    };
+
+    /**
+     * 3. SHOP ITEMS & ACHIEVEMENTS CATALOG
+     */
+    const SHOP_CATALOG = [
+      // Flappy Bird Skins
+      { id: 'bird_classic', category: 'flappy', name: 'Sunny Canary', price: 0, color: '#facc15', accent: '#ea580c', icon: '🐤', desc: 'Classic golden arcade bird.' },
+      { id: 'bird_cyber', category: 'flappy', name: 'Cyber Neon Bird', price: 100, color: '#00f0ff', accent: '#ec4899', icon: '🤖', desc: 'Electric cyan cybernetic flyer.' },
+      { id: 'bird_phoenix', category: 'flappy', name: 'Crimson Phoenix', price: 250, color: '#f43f5e', accent: '#fbbf24', icon: '🔥', desc: 'Blazing red & gold plumage.' },
+      { id: 'bird_royal', category: 'flappy', name: 'Emerald Dragon', price: 450, color: '#10b981', accent: '#a855f7', icon: '🐉', desc: 'Mythic emerald scales.' },
+      // Snake Skins
+      { id: 'snake_emerald', category: 'snake', name: 'Neon Viper', price: 0, color: '#22c55e', accent: '#86efac', icon: '🐍', desc: 'Standard glowing arcade viper.' },
+      { id: 'snake_plasma', category: 'snake', name: 'Plasma Python', price: 150, color: '#c084fc', accent: '#38bdf8', icon: '⚡', desc: 'High-voltage purple plasma.' },
+      // Paddle & Ball Theme (Breakout & Pong)
+      { id: 'paddle_cyan', category: 'paddle', name: 'Laser Cyan', price: 0, color: '#38bdf8', accent: '#ffffff', icon: '🏓', desc: 'Sleek cyan energy paddle.' },
+      { id: 'paddle_gold', category: 'paddle', name: '24K Gold Bar', price: 200, color: '#fbbf24', accent: '#fef08a', icon: '✨', desc: 'Luxury solid gold paddle.' },
+      // Vehicle / Ship Skin (Car Racing & Space Shooter)
+      { id: 'ship_cobalt', category: 'vehicle', name: 'Cobalt Interceptor', price: 0, color: '#3b82f6', accent: '#93c5fd', icon: '🚀', desc: 'Agile blue starfighter & racer.' },
+      { id: 'ship_crimson', category: 'vehicle', name: 'Crimson Fury GT', price: 300, color: '#ef4444', accent: '#fde047', icon: '🏎️', desc: 'Turbocharged scarlet chassis.' }
+    ];
+
+    const ACHIEVEMENTS_LIST = [
+      { id: 'first_game', title: 'First Steps', desc: 'Complete your very first mini-game.', icon: '🎮', reward: 50 },
+      { id: 'flappy_10', title: 'Pipe Navigator', desc: 'Score 10+ in Flappy Bird.', icon: '🐦', reward: 100 },
+      { id: 'coin_100', title: 'Coin Collector', desc: 'Accumulate 100+ total coins.', icon: '🪙', reward: 75 },
+      { id: 'explorer_5', title: 'Arcade Explorer', desc: 'Play 5 different mini-games.', icon: '🧭', reward: 120 },
+      { id: 'explorer_15', title: 'Master Gamer', desc: 'Play 15 different mini-games.', icon: '👑', reward: 300 },
+      { id: 'skin_buyer', title: 'Fashionista', desc: 'Unlock any cosmetic skin in the Shop.', icon: '🎨', reward: 80 },
+      { id: 'level_5', title: 'Rising Star', desc: 'Reach Player Level 5.', icon: '⭐', reward: 150 },
+      { id: 'matches_20', title: 'Arcade Addict', desc: 'Play 20 total matches.', icon: '🔥', reward: 200 }
+    ];
+
+    /**
+     * 4. STORAGE & PROGRESSION MANAGER
+     */
+    const StorageManager = {
+      KEY: 'SUPER_MINI_GAMES_SAVE_V1',
+      state: {
+        profile: { name: 'ArcadeHero', avatar: '👾', xp: 0, level: 1 },
+        coins: 120,
+        totalCoinsEarned: 120,
+        totalMatches: 0,
+        lastDailyClaim: 0,
+        favorites: ['flappy', 'tetris', 'snake'],
+        recent: [],
+        playedGames: {},
+        highScores: {},
+        unlockedSkins: ['bird_classic', 'snake_emerald', 'paddle_cyan', 'ship_cobalt'],
+        equippedSkins: {
+          flappy: 'bird_classic',
+          snake: 'snake_emerald',
+          paddle: 'paddle_cyan',
+          vehicle: 'ship_cobalt'
+        },
+        achievements: [],
+        muted: false
+      },
+
+      load() {
+        try {
+          const raw = localStorage.getItem(this.KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            this.state = {
+              ...this.state,
+              ...parsed,
+              profile: { ...this.state.profile, ...(parsed.profile || {}) },
+              equippedSkins: { ...this.state.equippedSkins, ...(parsed.equippedSkins || {}) }
+            };
+          }
+          SoundFX.muted = !!this.state.muted;
+          const btn = document.getElementById('soundToggleBtn');
+          if (btn) btn.textContent = SoundFX.muted ? '🔇' : '🔊';
+        } catch (e) {
+          console.warn('Storage load fallback:', e);
+        }
+      },
+
+      save() {
+        try {
+          localStorage.setItem(this.KEY, JSON.stringify(this.state));
+        } catch (e) {}
+        App.updateHeaderUI();
+      },
+
+      addCoins(amount) {
+        if (amount <= 0) return;
+        this.state.coins += amount;
+        this.state.totalCoinsEarned += amount;
+        this.checkAchievements();
+        this.save();
+      },
+
+      addXP(amount) {
+        this.state.profile.xp += amount;
+        const needed = this.state.profile.level * 150;
+        while (this.state.profile.xp >= this.state.profile.level * 150) {
+          this.state.profile.xp -= this.state.profile.level * 150;
+          this.state.profile.level++;
+          App.showToast(`🎉 LEVEL UP! You are now Level ${this.state.profile.level}!`, 'cyan');
+          SoundFX.play('win');
+        }
+        this.checkAchievements();
+        this.save();
+      },
+
+      recordMatch(gameId, score, coinsEarned, xpEarned) {
+        this.state.totalMatches++;
+        this.state.playedGames[gameId] = (this.state.playedGames[gameId] || 0) + 1;
+
+        // Recent strip
+        this.state.recent = [gameId, ...this.state.recent.filter(id => id !== gameId)].slice(0, 6);
+
+        // High score
+        const prevBest = this.state.highScores[gameId] || 0;
+        if (score > prevBest) {
+          this.state.highScores[gameId] = score;
+          YandexSDK.submitLeaderboardScore(gameId, score);
+        }
+
+        if (gameId === 'flappy' && score >= 10) {
+          this.unlockAchievement('flappy_10');
+        }
+
+        this.addCoins(coinsEarned);
+        this.addXP(xpEarned);
+        this.checkAchievements();
+        this.save();
+      },
+
+      getSkin(category) {
+        const id = this.state.equippedSkins[category];
+        return SHOP_CATALOG.find(s => s.id === id) || SHOP_CATALOG.find(s => s.category === category);
+      },
+
+      unlockAchievement(id) {
+        if (this.state.achievements.includes(id)) return;
+        const ach = ACHIEVEMENTS_LIST.find(a => a.id === id);
+        if (!ach) return;
+        this.state.achievements.push(id);
+        this.state.coins += ach.reward;
+        this.state.totalCoinsEarned += ach.reward;
+        App.showToast(`🏆 Achievement: ${ach.title} (+${ach.reward} 🪙)`, 'gold');
+        SoundFX.play('win');
+        this.save();
+      },
+
+      checkAchievements() {
+        if (this.state.totalMatches >= 1) this.unlockAchievement('first_game');
+        if (this.state.totalMatches >= 20) this.unlockAchievement('matches_20');
+        if (this.state.totalCoinsEarned >= 100) this.unlockAchievement('coin_100');
+        const uniquePlayed = Object.keys(this.state.playedGames).length;
+        if (uniquePlayed >= 5) this.unlockAchievement('explorer_5');
+        if (uniquePlayed >= 15) this.unlockAchievement('explorer_15');
+        if (this.state.unlockedSkins.length > 4) this.unlockAchievement('skin_buyer');
+        if (this.state.profile.level >= 5) this.unlockAchievement('level_5');
+      }
+    };
+
+    /**
+     * 5. BASE MINI-GAME ENGINE CLASS
+     * Every one of the 20 games extends BaseGame for clean lifecycle, input, & rendering.
+     */
+    class BaseGame {
+      constructor(canvas, ctx, callbacks) {
+        this.canvas = canvas;
+        this.ctx = ctx;
+        this.cb = callbacks; // { onScore, onCoins, onGameOver, setControls }
+        this.score = 0;
+        this.coins = 0;
+        this.isRunning = false;
+        this.isPaused = false;
+        this.lastTime = 0;
+      }
+      init() {}
+      start() { this.isRunning = true; this.isPaused = false; }
+      pause() { this.isPaused = true; }
+      resume() { this.isPaused = false; this.lastTime = performance.now(); }
+      update(dt) {}
+      draw() {}
+      onKeyDown(e) {}
+      onKeyUp(e) {}
+      onPointerDown(x, y, e) {}
+      onPointerMove(x, y, e) {}
+      onPointerUp(x, y, e) {}
+      destroy() { this.isRunning = false; }
+      setScore(val) {
+        this.score = val;
+        if (this.cb.onScore) this.cb.onScore(this.score);
+      }
+      addCoins(val) {
+        this.coins += val;
+        if (this.cb.onCoins) this.cb.onCoins(this.coins);
+      }
+      triggerGameOver(won = false) {
+        if (!this.isRunning) return;
+        this.isRunning = false;
+        if (this.cb.onGameOver) this.cb.onGameOver({ score: this.score, coins: this.coins, won });
+      }
+    }
+
+    /* =======================================================================
+       GAME 1: FLAPPY BIRD (FLAGSHIP IMPLEMENTATION)
+       - Smooth flapping bird animation with wing cycle & rotation
+       - Selectable unlocked skins from Shop
+       - Two green pipes with random gap positions
+       - Collectible spinning gold coins in the middle of gaps + floating '+1' popups
+       - Smooth scrolling parallax city/hills/clouds background
+       - Increasing speed & tighter gaps over time
+       ======================================================================= */
+    class FlappyBirdGame extends BaseGame {
+      init() {
+        this.skin = StorageManager.getSkin('flappy');
+        this.bird = { x: 160, y: 240, vy: 0, r: 17, wingPhase: 0, rot: 0 };
+        this.gravity = 1350;
+        this.flapForce = -430;
+        this.pipes = [];
+        this.coinItems = [];
+        this.popups = [];
+        this.pipeTimer = 0;
+        this.pipeInterval = 1.65;
+        this.speed = 210;
+        this.bgOffset = 0;
+        this.groundOffset = 0;
+        this.setScore(0);
+        this.coins = 0;
+        this.cb.onCoins(0);
+        this.cb.setControls(`
+          <button onpointerdown="GameManager.activeGame && GameManager.activeGame.flap()" class="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-arcade font-black text-sm shadow-lg active:scale-95">
+            🪽 FLAP (SPACE / TAP)
+          </button>
+        `);
+      }
+
+      flap() {
+        if (!this.isRunning || this.isPaused) return;
+        this.bird.vy = this.flapForce;
+        this.bird.wingPhase = 0;
+        SoundFX.play('jump');
+      }
+
+      onKeyDown(e) {
+        if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+          e.preventDefault();
+          this.flap();
+        }
+      }
+
+      onPointerDown() {
+        this.flap();
+      }
+
+      spawnPipe(W, H) {
+        const groundH = 56;
+        const playH = H - groundH;
+        const difficulty = Math.min(this.score * 1.8, 45);
+        const gapHeight = Math.max(115, 158 - difficulty);
+        const margin = 55;
+        const gapY = margin + Math.random() * (playH - gapHeight - margin * 2);
+
+        this.pipes.push({
+          x: W + 40,
+          w: 62,
+          gapY,
+          gapHeight,
+          passed: false
+        });
+
+        // Collectible gold coin right in the middle of the pipe gap
+        this.coinItems.push({
+          x: W + 40 + 31,
+          y: gapY + gapHeight / 2,
+          r: 13,
+          spin: 0,
+          collected: false
+        });
+      }
+
+      update(dt) {
+        const W = this.canvas.width;
+        const H = this.canvas.height;
+        const groundY = H - 56;
+
+        // Progressive difficulty
+        this.speed = 210 + Math.min(this.score * 4.5, 170);
+        this.pipeInterval = Math.max(1.15, 1.65 - this.score * 0.012);
+
+        // Parallax scrolling
+        this.bgOffset = (this.bgOffset + this.speed * 0.25 * dt) % 400;
+        this.groundOffset = (this.groundOffset + this.speed * dt) % 48;
+
+        // Bird physics & wing animation
+        this.bird.vy += this.gravity * dt;
+        this.bird.y += this.bird.vy * dt;
+        this.bird.wingPhase += dt * 16;
+        this.bird.rot = Math.max(-0.48, Math.min(Math.PI / 2.4, this.bird.vy / 520));
+
+        if (this.bird.y - this.bird.r < 0) {
+          this.bird.y = this.bird.r;
+          this.bird.vy = 0;
+        }
+
+        // Ground collision
+        if (this.bird.y + this.bird.r >= groundY) {
+          this.bird.y = groundY - this.bird.r;
+          SoundFX.play('hit');
+          this.triggerGameOver(false);
+          return;
+        }
+
+        // Spawn pipes
+        this.pipeTimer += dt;
+        if (this.pipeTimer >= this.pipeInterval) {
+          this.pipeTimer = 0;
+          this.spawnPipe(W, H);
+        }
+
+        // Move & check pipes
+        for (let i = this.pipes.length - 1; i >= 0; i--) {
+          const p = this.pipes[i];
+          p.x -= this.speed * dt;
+
+          // Score when passing pipe center
+          if (!p.passed && p.x + p.w / 2 < this.bird.x) {
+            p.passed = true;
+            this.setScore(this.score + 1);
+            SoundFX.play('score');
+          }
+
+          // AABB vs Circle collision
+          const inX = this.bird.x + this.bird.r - 3 > p.x && this.bird.x - this.bird.r + 3 < p.x + p.w;
+          const hitTop = this.bird.y - this.bird.r + 3 < p.gapY;
+          const hitBottom = this.bird.y + this.bird.r - 3 > p.gapY + p.gapHeight;
+
+          if (inX && (hitTop || hitBottom)) {
+            SoundFX.play('hit');
+            this.triggerGameOver(false);
+            return;
+          }
+
+          if (p.x + p.w < -40) this.pipes.splice(i, 1);
+        }
+
+        // Move & collect gold coins
+        for (let i = this.coinItems.length - 1; i >= 0; i--) {
+          const c = this.coinItems[i];
+          c.x -= this.speed * dt;
+          c.spin += dt * 6;
+
+          const dist = Math.hypot(this.bird.x - c.x, this.bird.y - c.y);
+          if (!c.collected && dist < this.bird.r + c.r + 4) {
+            c.collected = true;
+            this.addCoins(1);
+            SoundFX.play('coin');
+            this.popups.push({ x: c.x, y: c.y, text: '+1 🪙', alpha: 1 });
+          }
+
+          if (c.x < -40 || c.collected) this.coinItems.splice(i, 1);
+        }
+
+        // Update floating score/coin popups
+        for (let i = this.popups.length - 1; i >= 0; i--) {
+          const pop = this.popups[i];
+          pop.y -= 55 * dt;
+          pop.alpha -= 1.35 * dt;
+          if (pop.alpha <= 0) this.popups.splice(i, 1);
+        }
+      }
+
+      draw() {
+        const ctx = this.ctx;
+        const W = this.canvas.width;
+        const H = this.canvas.height;
+        const groundY = H - 56;
+
+        // Sky gradient
+        const sky = ctx.createLinearGradient(0, 0, 0, groundY);
+        sky.addColorStop(0, '#0c4a6e');
+        sky.addColorStop(0.55, '#0284c7');
+        sky.addColorStop(1, '#7dd3fc');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, W, groundY);
+
+        // Parallax clouds & distant skyline
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        for (let x = -this.bgOffset; x < W + 200; x += 200) {
+          ctx.beginPath();
+          ctx.arc(x + 40, 80, 26, 0, Math.PI * 2);
+          ctx.arc(x + 68, 74, 32, 0, Math.PI * 2);
+          ctx.arc(x + 98, 82, 24, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Distant hills
+        ctx.fillStyle = '#0369a1';
+        for (let x = -this.bgOffset * 1.4; x < W + 240; x += 240) {
+          ctx.beginPath();
+          ctx.arc(x + 120, groundY + 10, 110, Math.PI, 0);
+          ctx.fill();
+        }
+
+        // Green Pipes with glossy highlights & caps
+        for (const p of this.pipes) {
+          const grad = ctx.createLinearGradient(p.x, 0, p.x + p.w, 0);
+          grad.addColorStop(0, '#15803d');
+          grad.addColorStop(0.35, '#4ade80');
+          grad.addColorStop(1, '#14532d');
+
+          ctx.fillStyle = grad;
+          ctx.strokeStyle = '#052e16';
+          ctx.lineWidth = 2.5;
+
+          // Top Pipe
+          ctx.fillRect(p.x, 0, p.w, p.gapY);
+          ctx.strokeRect(p.x, -2, p.w, p.gapY + 2);
+          // Top Pipe Lip
+          ctx.fillRect(p.x - 5, p.gapY - 24, p.w + 10, 24);
+          ctx.strokeRect(p.x - 5, p.gapY - 24, p.w + 10, 24);
+
+          // Bottom Pipe
+          const botY = p.gapY + p.gapHeight;
+          const botH = groundY - botY;
+          ctx.fillRect(p.x, botY, p.w, botH);
+          ctx.strokeRect(p.x, botY, p.w, botH);
+          // Bottom Pipe Lip
+          ctx.fillRect(p.x - 5, botY, p.w + 10, 24);
+          ctx.strokeRect(p.x - 5, botY, p.w + 10, 24);
+        }
+
+        // Collectible Spinning Gold Coins
+        for (const c of this.coinItems) {
+          const scaleX = Math.max(0.25, Math.abs(Math.cos(c.spin)));
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.scale(scaleX, 1);
+          ctx.fillStyle = '#fbbf24';
+          ctx.beginPath();
+          ctx.arc(0, 0, c.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#b45309';
+          ctx.stroke();
+          ctx.fillStyle = '#fef08a';
+          ctx.font = 'bold 13px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('$', 0, 1);
+          ctx.restore();
+        }
+
+        // Scrolling Ground
+        ctx.fillStyle = '#65a30d';
+        ctx.fillRect(0, groundY, W, 14);
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(0, groundY + 14, W, 42);
+        ctx.fillStyle = '#84cc16';
+        for (let x = -this.groundOffset; x < W + 48; x += 48) {
+          ctx.beginPath();
+          ctx.moveTo(x, groundY);
+          ctx.lineTo(x + 24, groundY);
+          ctx.lineTo(x + 12, groundY + 14);
+          ctx.lineTo(x - 12, groundY + 14);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Bird with equipped skin & animated wing
+        ctx.save();
+        ctx.translate(this.bird.x, this.bird.y);
+        ctx.rotate(this.bird.rot);
+
+        // Body
+        ctx.fillStyle = this.skin.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.bird.r + 3, this.bird.r, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#0f172a';
+        ctx.stroke();
+
+        // Wing (animated flap)
+        const wingY = Math.sin(this.bird.wingPhase) * 6;
+        ctx.fillStyle = this.skin.accent;
+        ctx.beginPath();
+        ctx.ellipse(-4, wingY, 10, 6, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Eye
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(8, -5, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(10, -5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Beak
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.moveTo(15, -1);
+        ctx.lineTo(25, 3);
+        ctx.lineTo(15, 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // Floating Coin/Score Popups
+        for (const pop of this.popups) {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, pop.alpha);
+          ctx.font = 'bold 16px Orbitron, sans-serif';
+          ctx.fillStyle = '#fde047';
+          ctx.textAlign = 'center';
+          ctx.fillText(pop.text, pop.x, pop.y);
+          ctx.restore();
+        }
+      }
+    }
+
+    /* =======================================================================
+       GAME 2: SNAKE
+       ======================================================================= */
+    class SnakeGame extends BaseGame {
+      init() {
+        this.skin = StorageManager.getSkin('snake');
+        this.cols = 24;
+        this.rows = 16;
+        this.snake = [{ x: 10, y: 8 }, { x: 9, y: 8 }, { x: 8, y: 8 }];
+        this.dir = { x: 1, y: 0 };
+        this.nextDir = { x: 1, y: 0 };
+        this.food = { x: 16, y: 8 };
+        this.timer = 0;
+        this.stepTime = 0.12;
+        this.setScore(0);
+        this.cb.setControls(this.dpadHTML());
+      }
+      dpadHTML() {
+        return `
+          <div class="grid grid-cols-3 gap-1.5 w-36">
+            <div></div>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.setDir(0,-1)" class="p-3 rounded-xl bg-slate-800 active:bg-cyan-500 text-white font-bold">▲</button>
+            <div></div>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.setDir(-1,0)" class="p-3 rounded-xl bg-slate-800 active:bg-cyan-500 text-white font-bold">◀</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.setDir(0,1)" class="p-3 rounded-xl bg-slate-800 active:bg-cyan-500 text-white font-bold">▼</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.setDir(1,0)" class="p-3 rounded-xl bg-slate-800 active:bg-cyan-500 text-white font-bold">▶</button>
+          </div>
+        `;
+      }
+      setDir(dx, dy) {
+        if (this.dir.x === -dx && this.dir.y === -dy) return;
+        this.nextDir = { x: dx, y: dy };
+      }
+      onKeyDown(e) {
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); this.setDir(0, -1); }
+        if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); this.setDir(0, 1); }
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') { e.preventDefault(); this.setDir(-1, 0); }
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') { e.preventDefault(); this.setDir(1, 0); }
+      }
+      spawnFood() {
+        while (true) {
+          const fx = Math.floor(Math.random() * this.cols);
+          const fy = Math.floor(Math.random() * this.rows);
+          if (!this.snake.some(s => s.x === fx && s.y === fy)) {
+            this.food = { x: fx, y: fy };
+            break;
+          }
+        }
+      }
+      update(dt) {
+        this.timer += dt;
+        const speed = Math.max(0.06, this.stepTime - this.score * 0.002);
+        if (this.timer < speed) return;
+        this.timer = 0;
+        this.dir = this.nextDir;
+
+        const head = { x: this.snake[0].x + this.dir.x, y: this.snake[0].y + this.dir.y };
+        if (head.x < 0 || head.x >= this.cols || head.y < 0 || head.y >= this.rows ||
+            this.snake.some(s => s.x === head.x && s.y === head.y)) {
+          SoundFX.play('hit');
+          this.triggerGameOver(false);
+          return;
+        }
+        this.snake.unshift(head);
+        if (head.x === this.food.x && head.y === this.food.y) {
+          this.setScore(this.score + 10);
+          this.addCoins(2);
+          SoundFX.play('coin');
+          this.spawnFood();
+        } else {
+          this.snake.pop();
+        }
+      }
+      draw() {
+        const ctx = this.ctx;
+        const W = this.canvas.width;
+        const H = this.canvas.height;
+        const cw = W / this.cols;
+        const ch = H / this.rows;
+
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, W, H);
+
+        // Subtle grid
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        for (let x = 0; x <= this.cols; x++) {
+          ctx.beginPath(); ctx.moveTo(x * cw, 0); ctx.lineTo(x * cw, H); ctx.stroke();
+        }
+        for (let y = 0; y <= this.rows; y++) {
+          ctx.beginPath(); ctx.moveTo(0, y * ch); ctx.lineTo(W, y * ch); ctx.stroke();
+        }
+
+        // Food
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.arc((this.food.x + 0.5) * cw, (this.food.y + 0.5) * ch, Math.min(cw, ch) * 0.38, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Snake
+        this.snake.forEach((seg, idx) => {
+          ctx.fillStyle = idx === 0 ? this.skin.accent : this.skin.color;
+          ctx.beginPath();
+          ctx.roundRect(seg.x * cw + 2, seg.y * ch + 2, cw - 4, ch - 4, 6);
+          ctx.fill();
+        });
+      }
+    }
+
+    /* =======================================================================
+       GAME 3: TETRIS
+       ======================================================================= */
+    class TetrisGame extends BaseGame {
+      init() {
+        this.cols = 10;
+        this.rows = 20;
+        this.board = Array.from({ length: this.rows }, () => Array(this.cols).fill(0));
+        this.shapes = [
+          { m: [[1, 1, 1, 1]], c: '#00f0ff' },
+          { m: [[1, 1], [1, 1]], c: '#facc15' },
+          { m: [[0, 1, 0], [1, 1, 1]], c: '#a855f7' },
+          { m: [[1, 0, 0], [1, 1, 1]], c: '#3b82f6' },
+          { m: [[0, 0, 1], [1, 1, 1]], c: '#f97316' },
+          { m: [[0, 1, 1], [1, 1, 0]], c: '#22c55e' },
+          { m: [[1, 1, 0], [0, 1, 1]], c: '#ef4444' }
+        ];
+        this.dropTimer = 0;
+        this.setScore(0);
+        this.spawnPiece();
+        this.cb.setControls(`
+          <div class="flex gap-2">
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.move(-1)" class="px-5 py-3 rounded-xl bg-slate-800 active:bg-cyan-500 text-white font-bold">◀</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.rotate()" class="px-5 py-3 rounded-xl bg-fuchsia-600 active:bg-fuchsia-400 text-white font-bold">↻ Rotate</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.drop()" class="px-5 py-3 rounded-xl bg-slate-800 active:bg-cyan-500 text-white font-bold">▼</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.move(1)" class="px-5 py-3 rounded-xl bg-slate-800 active:bg-cyan-500 text-white font-bold">▶</button>
+          </div>
+        `);
+      }
+      spawnPiece() {
+        const s = this.shapes[Math.floor(Math.random() * this.shapes.length)];
+        this.piece = { m: s.m.map(r => [...r]), c: s.c, x: 3, y: 0 };
+        if (this.collides(this.piece.x, this.piece.y, this.piece.m)) {
+          SoundFX.play('hit');
+          this.triggerGameOver(false);
+        }
+      }
+      collides(px, py, mat) {
+        for (let r = 0; r < mat.length; r++) {
+          for (let c = 0; c < mat[r].length; c++) {
+            if (!mat[r][c]) continue;
+            const nx = px + c, ny = py + r;
+            if (nx < 0 || nx >= this.cols || ny >= this.rows) return true;
+            if (ny >= 0 && this.board[ny][nx]) return true;
+          }
+        }
+        return false;
+      }
+      move(dx) {
+        if (!this.isRunning || this.isPaused) return;
+        if (!this.collides(this.piece.x + dx, this.piece.y, this.piece.m)) {
+          this.piece.x += dx;
+          SoundFX.play('click');
+        }
+      }
+      rotate() {
+        if (!this.isRunning || this.isPaused) return;
+        const rot = this.piece.m[0].map((_, i) => this.piece.m.map(row => row[i]).reverse());
+        if (!this.collides(this.piece.x, this.piece.y, rot)) {
+          this.piece.m = rot;
+          SoundFX.play('click');
+        }
+      }
+      drop() {
+        if (!this.isRunning || this.isPaused) return;
+        if (!this.collides(this.piece.x, this.piece.y + 1, this.piece.m)) {
+          this.piece.y++;
+        } else {
+          this.lockPiece();
+        }
+      }
+      lockPiece() {
+        for (let r = 0; r < this.piece.m.length; r++) {
+          for (let c = 0; c < this.piece.m[r].length; c++) {
+            if (this.piece.m[r][c] && this.piece.y + r >= 0) {
+              this.board[this.piece.y + r][this.piece.x + c] = this.piece.c;
+            }
+          }
+        }
+        let lines = 0;
+        for (let r = this.rows - 1; r >= 0; r--) {
+          if (this.board[r].every(cell => cell !== 0)) {
+            this.board.splice(r, 1);
+            this.board.unshift(Array(this.cols).fill(0));
+            lines++;
+            r++;
+          }
+        }
+        if (lines > 0) {
+          this.setScore(this.score + lines * 100);
+          this.addCoins(lines * 5);
+          SoundFX.play('coin');
+        }
+        this.spawnPiece();
+      }
+      onKeyDown(e) {
+        if (e.code === 'ArrowLeft') { e.preventDefault(); this.move(-1); }
+        if (e.code === 'ArrowRight') { e.preventDefault(); this.move(1); }
+        if (e.code === 'ArrowUp') { e.preventDefault(); this.rotate(); }
+        if (e.code === 'ArrowDown') { e.preventDefault(); this.drop(); }
+      }
+      update(dt) {
+        this.dropTimer += dt;
+        const interval = Math.max(0.15, 0.55 - this.score * 0.0002);
+        if (this.dropTimer >= interval) {
+          this.dropTimer = 0;
+          this.drop();
+        }
+      }
+      draw() {
+        const ctx = this.ctx;
+        const W = this.canvas.width;
+        const H = this.canvas.height;
+        ctx.fillStyle = '#070b14';
+        ctx.fillRect(0, 0, W, H);
+
+        const cellSize = Math.floor((H - 20) / this.rows);
+        const boardW = cellSize * this.cols;
+        const offsetX = Math.floor((W - boardW) / 2);
+        const offsetY = 10;
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(offsetX, offsetY, boardW, cellSize * this.rows);
+        ctx.strokeStyle = '#334155';
+        ctx.strokeRect(offsetX, offsetY, boardW, cellSize * this.rows);
+
+        for (let r = 0; r < this.rows; r++) {
+          for (let c = 0; c < this.cols; c++) {
+            if (this.board[r][c]) {
+              ctx.fillStyle = this.board[r][c];
+              ctx.fillRect(offsetX + c * cellSize + 1, offsetY + r * cellSize + 1, cellSize - 2, cellSize - 2);
+            }
+          }
+        }
+        if (this.piece) {
+          ctx.fillStyle = this.piece.c;
+          for (let r = 0; r < this.piece.m.length; r++) {
+            for (let c = 0; c < this.piece.m[r].length; c++) {
+              if (this.piece.m[r][c]) {
+                ctx.fillRect(offsetX + (this.piece.x + c) * cellSize + 1, offsetY + (this.piece.y + r) * cellSize + 1, cellSize - 2, cellSize - 2);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    /* =======================================================================
+       GAME 4: 2048 PUZZLE
+       ======================================================================= */
+    class Game2048 extends BaseGame {
+      init() {
+        this.grid = Array.from({ length: 4 }, () => Array(4).fill(0));
+        this.setScore(0);
+        this.addTile();
+        this.addTile();
+        this.touchStart = null;
+        this.cb.setControls(`
+          <div class="flex gap-2">
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.shift('left')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-white font-bold">◀ Left</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.shift('up')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-white font-bold">▲ Up</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.shift('down')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-white font-bold">▼ Down</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.shift('right')" class="px-4 py-2.5 rounded-xl bg-slate-800 text-white font-bold">▶ Right</button>
+          </div>
+        `);
+      }
+      addTile() {
+        const empty = [];
+        for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) if (!this.grid[r][c]) empty.push({ r, c });
+        if (!empty.length) return;
+        const pick = empty[Math.floor(Math.random() * empty.length)];
+        this.grid[pick.r][pick.c] = Math.random() < 0.9 ? 2 : 4;
+      }
+      slideRow(row) {
+        let arr = row.filter(v => v);
+        let gained = 0;
+        for (let i = 0; i < arr.length - 1; i++) {
+          if (arr[i] === arr[i + 1]) {
+            arr[i] *= 2;
+            gained += arr[i];
+            arr.splice(i + 1, 1);
+          }
+        }
+        while (arr.length < 4) arr.push(0);
+        return { arr, gained };
+      }
+      shift(dir) {
+        if (!this.isRunning || this.isPaused) return;
+        const before = JSON.stringify(this.grid);
+        let totalGain = 0;
+        if (dir === 'left' || dir === 'right') {
+          for (let r = 0; r < 4; r++) {
+            let row = [...this.grid[r]];
+            if (dir === 'right') row.reverse();
+            const res = this.slideRow(row);
+            if (dir === 'right') res.arr.reverse();
+            this.grid[r] = res.arr;
+            totalGain += res.gained;
+          }
+        } else {
+          for (let c = 0; c < 4; c++) {
+            let col = [this.grid[0][c], this.grid[1][c], this.grid[2][c], this.grid[3][c]];
+            if (dir === 'down') col.reverse();
+            const res = this.slideRow(col);
+            if (dir === 'down') res.arr.reverse();
+            for (let r = 0; r < 4; r++) this.grid[r][c] = res.arr[r];
+            totalGain += res.gained;
+          }
+        }
+        if (JSON.stringify(this.grid) !== before) {
+          if (totalGain > 0) {
+            this.setScore(this.score + totalGain);
+            this.addCoins(Math.max(1, Math.floor(totalGain / 16)));
+            SoundFX.play('coin');
+          } else {
+            SoundFX.play('click');
+          }
+          this.addTile();
+          if (!this.canMove()) {
+            SoundFX.play('hit');
+            this.triggerGameOver(false);
+          }
+        }
+      }
+      canMove() {
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 4; c++) {
+            if (!this.grid[r][c]) return true;
+            if (c < 3 && this.grid[r][c] === this.grid[r][c + 1]) return true;
+            if (r < 3 && this.grid[r][c] === this.grid[r + 1][c]) return true;
+          }
+        }
+        return false;
+      }
+      onKeyDown(e) {
+        if (e.code === 'ArrowLeft') { e.preventDefault(); this.shift('left'); }
+        if (e.code === 'ArrowRight') { e.preventDefault(); this.shift('right'); }
+        if (e.code === 'ArrowUp') { e.preventDefault(); this.shift('up'); }
+        if (e.code === 'ArrowDown') { e.preventDefault(); this.shift('down'); }
+      }
+      onPointerDown(x, y) { this.touchStart = { x, y }; }
+      onPointerUp(x, y) {
+        if (!this.touchStart) return;
+        const dx = x - this.touchStart.x, dy = y - this.touchStart.y;
+        this.touchStart = null;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 25) return;
+        if (Math.abs(dx) > Math.abs(dy)) this.shift(dx > 0 ? 'right' : 'left');
+        else this.shift(dy > 0 ? 'down' : 'up');
+      }
+      draw() {
+        const ctx = this.ctx;
+        const W = this.canvas.width;
+        const H = this.canvas.height;
+        ctx.fillStyle = '#0b1020';
+        ctx.fillRect(0, 0, W, H);
+
+        const size = Math.min(W, H) - 36;
+        const startX = (W - size) / 2;
+        const startY = (H - size) / 2;
+        const gap = 10;
+        const cell = (size - gap * 5) / 4;
+
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.roundRect(startX, startY, size, size, 16);
+        ctx.fill();
+
+        const palette = {
+          0: '#334155', 2: '#38bdf8', 4: '#818cf8', 8: '#c084fc',
+          16: '#f472b6', 32: '#fb7185', 64: '#f97316', 128: '#facc15',
+          256: '#4ade80', 512: '#2dd4bf', 1024: '#f59e0b', 2048: '#ef4444'
+        };
+
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 4; c++) {
+            const val = this.grid[r][c];
+            const x = startX + gap + c * (cell + gap);
+            const y = startY + gap + r * (cell + gap);
+            ctx.fillStyle = palette[val] || '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(x, y, cell, cell, 10);
+            ctx.fill();
+            if (val > 0) {
+              ctx.fillStyle = '#0f172a';
+              ctx.font = `900 ${val >= 1024 ? 22 : 28}px Orbitron, sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(val, x + cell / 2, y + cell / 2);
+            }
+          }
+        }
+      }
+    }
+
+    /* =======================================================================
+       GAME 5: BREAKOUT
+       ======================================================================= */
+    class BreakoutGame extends BaseGame {
+      init() {
+        this.skin = StorageManager.getSkin('paddle');
+        const W = this.canvas.width, H = this.canvas.height;
+        this.paddle = { w: 110, h: 14, x: W / 2 - 55, y: H - 30 };
+        this.ball = { x: W / 2, y: H - 50, vx: 240, vy: -260, r: 8 };
+        this.keys = {};
+        this.buildBricks();
+        this.setScore(0);
+        this.cb.setControls(`<div class="text-xs text-slate-400">Drag on screen or use ◀ ▶ Arrow keys</div>`);
+      }
+      buildBricks() {
+        const W = this.canvas.width;
+        const rows = 5, cols = 8, pad = 8;
+        const bw = (W - pad * (cols + 1)) / cols;
+        const colors = ['#f43f5e', '#f97316', '#facc15', '#4ade80', '#38bdf8'];
+        this.bricks = [];
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            this.bricks.push({
+              x: pad + c * (bw + pad),
+              y: 38 + r * 26,
+              w: bw,
+              h: 18,
+              color: colors[r % colors.length],
+              alive: true
+            });
+          }
+        }
+      }
+      onKeyDown(e) { this.keys[e.code] = true; }
+      onKeyUp(e) { this.keys[e.code] = false; }
+      onPointerMove(x) {
+        this.paddle.x = Math.max(0, Math.min(this.canvas.width - this.paddle.w, x - this.paddle.w / 2));
+      }
+      onPointerDown(x) { this.onPointerMove(x); }
+      update(dt) {
+        const W = this.canvas.width, H = this.canvas.height;
+        if (this.keys['ArrowLeft']) this.paddle.x = Math.max(0, this.paddle.x - 450 * dt);
+        if (this.keys['ArrowRight']) this.paddle.x = Math.min(W - this.paddle.w, this.paddle.x + 450 * dt);
+
+        this.ball.x += this.ball.vx * dt;
+        this.ball.y += this.ball.vy * dt;
+
+        if (this.ball.x - this.ball.r < 0) { this.ball.x = this.ball.r; this.ball.vx *= -1; }
+        if (this.ball.x + this.ball.r > W) { this.ball.x = W - this.ball.r; this.ball.vx *= -1; }
+        if (this.ball.y - this.ball.r < 0) { this.ball.y = this.ball.r; this.ball.vy *= -1; }
+
+        // Paddle bounce
+        if (this.ball.vy > 0 &&
+            this.ball.y + this.ball.r >= this.paddle.y &&
+            this.ball.x >= this.paddle.x && this.ball.x <= this.paddle.x + this.paddle.w) {
+          const hitPos = (this.ball.x - (this.paddle.x + this.paddle.w / 2)) / (this.paddle.w / 2);
+          this.ball.vx = hitPos * 320;
+          this.ball.vy = -Math.abs(this.ball.vy);
+          SoundFX.play('jump');
+        }
+
+        // Bricks
+        let aliveCount = 0;
+        for (const b of this.bricks) {
+          if (!b.alive) continue;
+          aliveCount++;
+          if (this.ball.x + this.ball.r > b.x && this.ball.x - this.ball.r < b.x + b.w &&
+              this.ball.y + this.ball.r > b.y && this.ball.y - this.ball.r < b.y + b.h) {
+            b.alive = false;
+            this.ball.vy *= -1;
+            this.setScore(this.score + 20);
+            this.addCoins(1);
+            SoundFX.play('coin');
+          }
+        }
+        if (aliveCount === 0) {
+          this.buildBricks();
+          this.ball.vy *= 1.1;
+        }
+        if (this.ball.y - this.ball.r > H) {
+          SoundFX.play('hit');
+          this.triggerGameOver(false);
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#080c18';
+        ctx.fillRect(0, 0, W, H);
+        for (const b of this.bricks) {
+          if (!b.alive) continue;
+          ctx.fillStyle = b.color;
+          ctx.beginPath();
+          ctx.roundRect(b.x, b.y, b.w, b.h, 5);
+          ctx.fill();
+        }
+        ctx.fillStyle = this.skin.color;
+        ctx.beginPath();
+        ctx.roundRect(this.paddle.x, this.paddle.y, this.paddle.w, this.paddle.h, 7);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(this.ball.x, this.ball.y, this.ball.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* =======================================================================
+       GAME 6: PONG (PLAYER VS SMART AI)
+       ======================================================================= */
+    class PongGame extends BaseGame {
+      init() {
+        this.skin = StorageManager.getSkin('paddle');
+        const W = this.canvas.width, H = this.canvas.height;
+        this.p1 = { x: 24, y: H / 2 - 42, w: 12, h: 84 };
+        this.ai = { x: W - 36, y: H / 2 - 42, w: 12, h: 84 };
+        this.p1Goals = 0;
+        this.aiGoals = 0;
+        this.resetBall(1);
+        this.setScore(0);
+        this.cb.setControls(`<div class="text-xs text-slate-400">Move pointer/finger up &amp; down • First to 5 wins!</div>`);
+      }
+      resetBall(dir) {
+        const W = this.canvas.width, H = this.canvas.height;
+        this.ball = { x: W / 2, y: H / 2, vx: 290 * dir, vy: (Math.random() - 0.5) * 240, r: 8 };
+      }
+      onPointerMove(_, y) { this.p1.y = Math.max(0, Math.min(this.canvas.height - this.p1.h, y - this.p1.h / 2)); }
+      onPointerDown(_, y) { this.onPointerMove(_, y); }
+      update(dt) {
+        const W = this.canvas.width, H = this.canvas.height;
+        // AI tracking
+        const aiCenter = this.ai.y + this.ai.h / 2;
+        if (aiCenter < this.ball.y - 10) this.ai.y += 235 * dt;
+        else if (aiCenter > this.ball.y + 10) this.ai.y -= 235 * dt;
+        this.ai.y = Math.max(0, Math.min(H - this.ai.h, this.ai.y));
+
+        this.ball.x += this.ball.vx * dt;
+        this.ball.y += this.ball.vy * dt;
+
+        if (this.ball.y - this.ball.r < 0 || this.ball.y + this.ball.r > H) this.ball.vy *= -1;
+
+        // Paddle collisions
+        if (this.ball.vx < 0 && this.ball.x - this.ball.r <= this.p1.x + this.p1.w &&
+            this.ball.y >= this.p1.y && this.ball.y <= this.p1.y + this.p1.h) {
+          this.ball.vx = Math.abs(this.ball.vx) * 1.05;
+          this.ball.vy += (this.ball.y - (this.p1.y + this.p1.h / 2)) * 3;
+          SoundFX.play('jump');
+        }
+        if (this.ball.vx > 0 && this.ball.x + this.ball.r >= this.ai.x &&
+            this.ball.y >= this.ai.y && this.ball.y <= this.ai.y + this.ai.h) {
+          this.ball.vx = -Math.abs(this.ball.vx) * 1.05;
+          SoundFX.play('click');
+        }
+
+        if (this.ball.x < 0) {
+          this.aiGoals++;
+          SoundFX.play('hit');
+          if (this.aiGoals >= 5) { this.triggerGameOver(false); return; }
+          this.resetBall(1);
+        } else if (this.ball.x > W) {
+          this.p1Goals++;
+          this.setScore(this.p1Goals * 100);
+          this.addCoins(5);
+          SoundFX.play('coin');
+          if (this.p1Goals >= 5) { this.triggerGameOver(true); return; }
+          this.resetBall(-1);
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#070b14';
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.setLineDash([8, 8]);
+        ctx.strokeStyle = '#334155';
+        ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.font = '900 36px Orbitron, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.p1Goals, W * 0.25, 55);
+        ctx.fillText(this.aiGoals, W * 0.75, 55);
+
+        ctx.fillStyle = this.skin.color;
+        ctx.fillRect(this.p1.x, this.p1.y, this.p1.w, this.p1.h);
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(this.ai.x, this.ai.y, this.ai.w, this.ai.h);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(this.ball.x, this.ball.y, this.ball.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* =======================================================================
+       GAME 7: MEMORY CARDS
+       ======================================================================= */
+    class MemoryCardsGame extends BaseGame {
+      init() {
+        const icons = ['🚀', '👾', '💎', '🔥', '⚡', '👑', '🍀', '🎯'];
+        const deck = [...icons, ...icons].sort(() => Math.random() - 0.5);
+        this.cards = deck.map((icon, idx) => ({ id: idx, icon, flipped: false, matched: false }));
+        this.selected = [];
+        this.moves = 0;
+        this.lock = false;
+        this.setScore(0);
+        this.cb.setControls(`<div class="text-xs text-slate-400">Tap cards to find all 8 matching pairs!</div>`);
+      }
+      onPointerDown(x, y) {
+        if (!this.isRunning || this.isPaused || this.lock) return;
+        const W = this.canvas.width, H = this.canvas.height;
+        const size = Math.min(W, H) - 30;
+        const sx = (W - size) / 2, sy = (H - size) / 2;
+        const gap = 10, cw = (size - gap * 5) / 4;
+        const col = Math.floor((x - sx - gap) / (cw + gap));
+        const row = Math.floor((y - sy - gap) / (cw + gap));
+        if (col < 0 || col > 3 || row < 0 || row > 3) return;
+        const card = this.cards[row * 4 + col];
+        if (!card || card.flipped || card.matched) return;
+
+        card.flipped = true;
+        this.selected.push(card);
+        SoundFX.play('click');
+
+        if (this.selected.length === 2) {
+          this.moves++;
+          this.lock = true;
+          const [a, b] = this.selected;
+          if (a.icon === b.icon) {
+            a.matched = b.matched = true;
+            this.selected = [];
+            this.lock = false;
+            this.setScore(this.score + 100);
+            this.addCoins(3);
+            SoundFX.play('coin');
+            if (this.cards.every(c => c.matched)) {
+              const bonus = Math.max(50, 300 - this.moves * 10);
+              this.setScore(this.score + bonus);
+              this.triggerGameOver(true);
+            }
+          } else {
+            setTimeout(() => {
+              a.flipped = b.flipped = false;
+              this.selected = [];
+              this.lock = false;
+            }, 650);
+          }
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#090e1c';
+        ctx.fillRect(0, 0, W, H);
+        const size = Math.min(W, H) - 30;
+        const sx = (W - size) / 2, sy = (H - size) / 2;
+        const gap = 10, cw = (size - gap * 5) / 4;
+
+        this.cards.forEach((c, idx) => {
+          const r = Math.floor(idx / 4), col = idx % 4;
+          const x = sx + gap + col * (cw + gap);
+          const y = sy + gap + r * (cw + gap);
+          ctx.fillStyle = c.matched ? '#065f46' : (c.flipped ? '#1e293b' : '#2563eb');
+          ctx.beginPath();
+          ctx.roundRect(x, y, cw, cw, 12);
+          ctx.fill();
+          ctx.strokeStyle = c.matched ? '#34d399' : '#60a5fa';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.font = `${Math.floor(cw * 0.48)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#fff';
+          ctx.fillText(c.flipped || c.matched ? c.icon : '?', x + cw / 2, y + cw / 2);
+        });
+      }
+    }
+
+    /* =======================================================================
+       GAME 8: MINESWEEPER (9x9, 10 MINES + FLAG MODE TOGGLE)
+       ======================================================================= */
+    class MinesweeperGame extends BaseGame {
+      init() {
+        this.rows = 9;
+        this.cols = 9;
+        this.mineCount = 10;
+        this.flagMode = false;
+        this.grid = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => ({
+          mine: false, open: false, flag: false, count: 0
+        })));
+        let placed = 0;
+        while (placed < this.mineCount) {
+          const r = Math.floor(Math.random() * 9), c = Math.floor(Math.random() * 9);
+          if (!this.grid[r][c].mine) { this.grid[r][c].mine = true; placed++; }
+        }
+        for (let r = 0; r < 9; r++) {
+          for (let c = 0; c < 9; c++) {
+            if (this.grid[r][c].mine) continue;
+            let cnt = 0;
+            for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+              const nr = r + dr, nc = c + dc;
+              if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9 && this.grid[nr][nc].mine) cnt++;
+            }
+            this.grid[r][c].count = cnt;
+          }
+        }
+        this.setScore(0);
+        this.updateControls();
+      }
+      updateControls() {
+        this.cb.setControls(`
+          <button onclick="GameManager.activeGame && GameManager.activeGame.toggleFlag()" class="px-5 py-2.5 rounded-xl ${this.flagMode ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-200'} font-bold text-xs">
+            🚩 Flag Mode: ${this.flagMode ? 'ON' : 'OFF'}
+          </button>
+        `);
+      }
+      toggleFlag() {
+        this.flagMode = !this.flagMode;
+        this.updateControls();
+      }
+      reveal(r, c) {
+        if (r < 0 || r >= 9 || c < 0 || c >= 9) return;
+        const cell = this.grid[r][c];
+        if (cell.open || cell.flag) return;
+        cell.open = true;
+        if (cell.mine) {
+          SoundFX.play('hit');
+          this.triggerGameOver(false);
+          return;
+        }
+        this.setScore(this.score + 10);
+        if (cell.count === 0) {
+          for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) this.reveal(r + dr, c + dc);
+        }
+        // Check win
+        let safeClosed = 0;
+        for (let rr = 0; rr < 9; rr++) for (let cc = 0; cc < 9; cc++) if (!this.grid[rr][cc].mine && !this.grid[rr][cc].open) safeClosed++;
+        if (safeClosed === 0) {
+          this.addCoins(25);
+          SoundFX.play('win');
+          this.triggerGameOver(true);
+        }
+      }
+      onPointerDown(x, y, e) {
+        if (!this.isRunning || this.isPaused) return;
+        const W = this.canvas.width, H = this.canvas.height;
+        const size = Math.min(W, H) - 24;
+        const sx = (W - size) / 2, sy = (H - size) / 2;
+        const cs = size / 9;
+        const c = Math.floor((x - sx) / cs), r = Math.floor((y - sy) / cs);
+        if (r < 0 || r >= 9 || c < 0 || c >= 9) return;
+        const cell = this.grid[r][c];
+        if (this.flagMode || (e && e.button === 2)) {
+          if (!cell.open) { cell.flag = !cell.flag; SoundFX.play('click'); }
+        } else {
+          SoundFX.play('click');
+          this.reveal(r, c);
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#090e1c';
+        ctx.fillRect(0, 0, W, H);
+        const size = Math.min(W, H) - 24;
+        const sx = (W - size) / 2, sy = (H - size) / 2;
+        const cs = size / 9;
+        const numColors = ['', '#38bdf8', '#4ade80', '#f43f5e', '#c084fc', '#f97316', '#2dd4bf', '#fff', '#94a3b8'];
+
+        for (let r = 0; r < 9; r++) {
+          for (let c = 0; c < 9; c++) {
+            const cell = this.grid[r][c];
+            const x = sx + c * cs, y = sy + r * cs;
+            ctx.fillStyle = cell.open ? (cell.mine ? '#dc2626' : '#1e293b') : '#334155';
+            ctx.beginPath();
+            ctx.roundRect(x + 2, y + 2, cs - 4, cs - 4, 6);
+            ctx.fill();
+
+            ctx.font = `bold ${Math.floor(cs * 0.5)}px Orbitron, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            if (cell.open) {
+              if (cell.mine) ctx.fillText('💣', x + cs / 2, y + cs / 2);
+              else if (cell.count > 0) {
+                ctx.fillStyle = numColors[cell.count];
+                ctx.fillText(cell.count, x + cs / 2, y + cs / 2);
+              }
+            } else if (cell.flag) {
+              ctx.fillText('🚩', x + cs / 2, y + cs / 2);
+            }
+          }
+        }
+      }
+    }
+
+    /* =======================================================================
+       GAME 9: TIC TAC TOE (SMART AI)
+       ======================================================================= */
+    class TicTacToeGame extends BaseGame {
+      init() {
+        this.board = Array(9).fill(null);
+        this.winLine = null;
+        this.setScore(0);
+        this.cb.setControls(`<div class="text-xs text-slate-400">You are X (Cyan) • Tap a square to play</div>`);
+      }
+      checkWinner(b) {
+        const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+        for (const [a, c, d] of lines) {
+          if (b[a] && b[a] === b[c] && b[a] === b[d]) return { winner: b[a], line: [a, c, d] };
+        }
+        if (b.every(x => x)) return { winner: 'draw', line: null };
+        return null;
+      }
+      aiMove() {
+        // Win or block
+        const empty = this.board.map((v, i) => v === null ? i : -1).filter(i => i !== -1);
+        if (!empty.length) return;
+        for (const sym of ['O', 'X']) {
+          for (const idx of empty) {
+            const copy = [...this.board];
+            copy[idx] = sym;
+            if (this.checkWinner(copy)?.winner === sym) {
+              this.board[idx] = 'O';
+              return;
+            }
+          }
+        }
+        if (this.board[4] === null) { this.board[4] = 'O'; return; }
+        this.board[empty[Math.floor(Math.random() * empty.length)]] = 'O';
+      }
+      onPointerDown(x, y) {
+        if (!this.isRunning || this.isPaused || this.winLine) return;
+        const W = this.canvas.width, H = this.canvas.height;
+        const size = Math.min(W, H) - 40;
+        const sx = (W - size) / 2, sy = (H - size) / 2;
+        const cs = size / 3;
+        const c = Math.floor((x - sx) / cs), r = Math.floor((y - sy) / cs);
+        if (c < 0 || c > 2 || r < 0 || r > 2) return;
+        const idx = r * 3 + c;
+        if (this.board[idx] !== null) return;
+
+        this.board[idx] = 'X';
+        SoundFX.play('click');
+        let res = this.checkWinner(this.board);
+        if (!res) {
+          this.aiMove();
+          res = this.checkWinner(this.board);
+        }
+        if (res) {
+          this.winLine = res.line;
+          if (res.winner === 'X') {
+            this.setScore(250);
+            this.addCoins(15);
+            SoundFX.play('win');
+            setTimeout(() => this.triggerGameOver(true), 600);
+          } else if (res.winner === 'draw') {
+            this.setScore(100);
+            this.addCoins(5);
+            setTimeout(() => this.triggerGameOver(true), 600);
+          } else {
+            SoundFX.play('hit');
+            setTimeout(() => this.triggerGameOver(false), 600);
+          }
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#090e1c';
+        ctx.fillRect(0, 0, W, H);
+        const size = Math.min(W, H) - 40;
+        const sx = (W - size) / 2, sy = (H - size) / 2;
+        const cs = size / 3;
+
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 4;
+        for (let i = 1; i <= 2; i++) {
+          ctx.beginPath(); ctx.moveTo(sx + i * cs, sy); ctx.lineTo(sx + i * cs, sy + size); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(sx, sy + i * cs); ctx.lineTo(sx + size, sy + i * cs); ctx.stroke();
+        }
+
+        ctx.font = `900 ${Math.floor(cs * 0.55)}px Orbitron, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        this.board.forEach((v, i) => {
+          if (!v) return;
+          const r = Math.floor(i / 3), c = i % 3;
+          ctx.fillStyle = v === 'X' ? '#00f0ff' : '#f43f5e';
+          ctx.fillText(v, sx + c * cs + cs / 2, sy + r * cs + cs / 2);
+        });
+      }
+    }
+
+    /* =======================================================================
+       GAME 10: ROCK PAPER SCISSORS (BEST OF 5)
+       ======================================================================= */
+    class RockPaperScissorsGame extends BaseGame {
+      init() {
+        this.playerPick = null;
+        this.aiPick = null;
+        this.pWins = 0;
+        this.aiWins = 0;
+        this.statusText = 'Choose your weapon! (First to 3)';
+        this.setScore(0);
+        this.cb.setControls(`
+          <div class="flex gap-3">
+            <button onclick="GameManager.activeGame && GameManager.activeGame.choose('rock')" class="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-cyan-500/30 border border-slate-600 text-white font-bold text-sm">🪨 Rock</button>
+            <button onclick="GameManager.activeGame && GameManager.activeGame.choose('paper')" class="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-cyan-500/30 border border-slate-600 text-white font-bold text-sm">📄 Paper</button>
+            <button onclick="GameManager.activeGame && GameManager.activeGame.choose('scissors')" class="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-cyan-500/30 border border-slate-600 text-white font-bold text-sm">✂️ Scissors</button>
+          </div>
+        `);
+      }
+      choose(pick) {
+        if (!this.isRunning || this.isPaused) return;
+        const opts = ['rock', 'paper', 'scissors'];
+        const ai = opts[Math.floor(Math.random() * 3)];
+        this.playerPick = pick;
+        this.aiPick = ai;
+
+        if (pick === ai) {
+          this.statusText = 'DRAW! Go again!';
+          SoundFX.play('click');
+        } else if ((pick === 'rock' && ai === 'scissors') || (pick === 'paper' && ai === 'rock') || (pick === 'scissors' && ai === 'paper')) {
+          this.pWins++;
+          this.setScore(this.pWins * 100);
+          this.addCoins(5);
+          this.statusText = 'YOU WIN THIS ROUND!';
+          SoundFX.play('coin');
+        } else {
+          this.aiWins++;
+          this.statusText = 'AI WINS THIS ROUND!';
+          SoundFX.play('hit');
+        }
+
+        if (this.pWins >= 3 || this.aiWins >= 3) {
+          setTimeout(() => this.triggerGameOver(this.pWins >= 3), 700);
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#090e1c';
+        ctx.fillRect(0, 0, W, H);
+        const map = { rock: '🪨', paper: '📄', scissors: '✂️' };
+
+        ctx.font = 'bold 18px Orbitron, sans-serif';
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'center';
+        ctx.fillText(`YOU: ${this.pWins}   —   AI: ${this.aiWins}`, W / 2, 48);
+
+        ctx.font = '72px sans-serif';
+        ctx.fillText(this.playerPick ? map[this.playerPick] : '❔', W * 0.3, H * 0.52);
+        ctx.fillText(this.aiPick ? map[this.aiPick] : '🤖', W * 0.7, H * 0.52);
+
+        ctx.font = 'bold 20px Orbitron, sans-serif';
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText('VS', W / 2, H * 0.52);
+
+        ctx.font = 'bold 16px Inter, sans-serif';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText(this.statusText, W / 2, H - 36);
+      }
+    }
+
+    /* =======================================================================
+       GAME 11: SPACE SHOOTER
+       ======================================================================= */
+    class SpaceShooterGame extends BaseGame {
+      init() {
+        this.skin = StorageManager.getSkin('vehicle');
+        const W = this.canvas.width, H = this.canvas.height;
+        this.ship = { x: W / 2, y: H - 46, r: 18 };
+        this.bullets = [];
+        this.enemies = [];
+        this.spawnTimer = 0;
+        this.fireTimer = 0;
+        this.setScore(0);
+        this.cb.setControls(`<div class="text-xs text-slate-400">Drag ship left/right • Auto-blasters active!</div>`);
+      }
+      onPointerMove(x) { this.ship.x = Math.max(24, Math.min(this.canvas.width - 24, x)); }
+      onPointerDown(x) { this.onPointerMove(x); }
+      update(dt) {
+        const W = this.canvas.width, H = this.canvas.height;
+        this.fireTimer += dt;
+        if (this.fireTimer >= 0.22) {
+          this.fireTimer = 0;
+          this.bullets.push({ x: this.ship.x, y: this.ship.y - 18 });
+          SoundFX.play('shoot');
+        }
+        this.spawnTimer += dt;
+        if (this.spawnTimer >= Math.max(0.45, 1.0 - this.score * 0.001)) {
+          this.spawnTimer = 0;
+          this.enemies.push({ x: 30 + Math.random() * (W - 60), y: -20, vy: 130 + Math.random() * 90, r: 16 });
+        }
+
+        this.bullets.forEach(b => b.y -= 480 * dt);
+        this.bullets = this.bullets.filter(b => b.y > -20);
+
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+          const e = this.enemies[i];
+          e.y += e.vy * dt;
+          if (Math.hypot(e.x - this.ship.x, e.y - this.ship.y) < e.r + this.ship.r) {
+            SoundFX.play('hit');
+            this.triggerGameOver(false);
+            return;
+          }
+          for (let j = this.bullets.length - 1; j >= 0; j--) {
+            const b = this.bullets[j];
+            if (Math.hypot(e.x - b.x, e.y - b.y) < e.r + 6) {
+              this.enemies.splice(i, 1);
+              this.bullets.splice(j, 1);
+              this.setScore(this.score + 25);
+              this.addCoins(2);
+              SoundFX.play('coin');
+              break;
+            }
+          }
+          if (e.y > H + 30) {
+            SoundFX.play('hit');
+            this.triggerGameOver(false);
+            return;
+          }
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#050711';
+        ctx.fillRect(0, 0, W, H);
+
+        // Lasers
+        ctx.fillStyle = '#00f0ff';
+        for (const b of this.bullets) ctx.fillRect(b.x - 2, b.y - 10, 4, 14);
+
+        // Enemies
+        ctx.font = '28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (const e of this.enemies) ctx.fillText('👾', e.x, e.y);
+
+        // Player Starfighter
+        ctx.fillStyle = this.skin.color;
+        ctx.beginPath();
+        ctx.moveTo(this.ship.x, this.ship.y - 20);
+        ctx.lineTo(this.ship.x - 18, this.ship.y + 16);
+        ctx.lineTo(this.ship.x + 18, this.ship.y + 16);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    /* =======================================================================
+       GAME 12: ASTEROID SURVIVAL
+       ======================================================================= */
+    class AsteroidSurvivalGame extends BaseGame {
+      init() {
+        const W = this.canvas.width, H = this.canvas.height;
+        this.player = { x: W / 2, y: H / 2, r: 14 };
+        this.asteroids = [];
+        this.timer = 0;
+        this.survivalSec = 0;
+        this.setScore(0);
+        this.cb.setControls(`<div class="text-xs text-slate-400">Drag anywhere to pilot &amp; dodge incoming asteroids!</div>`);
+      }
+      onPointerMove(x, y) {
+        this.player.x = Math.max(18, Math.min(this.canvas.width - 18, x));
+        this.player.y = Math.max(18, Math.min(this.canvas.height - 18, y));
+      }
+      onPointerDown(x, y) { this.onPointerMove(x, y); }
+      update(dt) {
+        const W = this.canvas.width, H = this.canvas.height;
+        this.survivalSec += dt;
+        this.setScore(Math.floor(this.survivalSec * 15));
+        if (Math.floor(this.survivalSec) > this.coins) this.addCoins(1);
+
+        this.timer += dt;
+        if (this.timer >= Math.max(0.28, 0.75 - this.survivalSec * 0.015)) {
+          this.timer = 0;
+          const side = Math.floor(Math.random() * 4);
+          let x = 0, y = 0;
+          if (side === 0) { x = Math.random() * W; y = -20; }
+          else if (side === 1) { x = W + 20; y = Math.random() * H; }
+          else if (side === 2) { x = Math.random() * W; y = H + 20; }
+          else { x = -20; y = Math.random() * H; }
+          const ang = Math.atan2(this.player.y - y, this.player.x - x) + (Math.random() - 0.5) * 0.5;
+          const spd = 140 + Math.random() * 110 + this.survivalSec * 2;
+          this.asteroids.push({ x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 14 + Math.random() * 14 });
+        }
+
+        for (let i = this.asteroids.length - 1; i >= 0; i--) {
+          const a = this.asteroids[i];
+          a.x += a.vx * dt;
+          a.y += a.vy * dt;
+          if (Math.hypot(a.x - this.player.x, a.y - this.player.y) < a.r + this.player.r - 3) {
+            SoundFX.play('hit');
+            this.triggerGameOver(false);
+            return;
+          }
+          if (a.x < -80 || a.x > W + 80 || a.y < -80 || a.y > H + 80) this.asteroids.splice(i, 1);
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#060812';
+        ctx.fillRect(0, 0, W, H);
+
+        for (const a of this.asteroids) {
+          ctx.fillStyle = '#64748b';
+          ctx.beginPath();
+          ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#94a3b8';
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#00f0ff';
+        ctx.beginPath();
+        ctx.arc(this.player.x, this.player.y, this.player.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* =======================================================================
+       GAME 13: ENDLESS RUNNER
+       ======================================================================= */
+    class EndlessRunnerGame extends BaseGame {
+      init() {
+        const H = this.canvas.height;
+        this.groundY = H - 50;
+        this.runner = { x: 90, y: this.groundY - 36, w: 28, h: 36, vy: 0, grounded: true };
+        this.obstacles = [];
+        this.coinsList = [];
+        this.timer = 0;
+        this.setScore(0);
+        this.cb.setControls(`
+          <button onpointerdown="GameManager.activeGame && GameManager.activeGame.jump()" class="px-8 py-3.5 rounded-2xl bg-cyan-400 text-slate-950 font-arcade font-black text-sm">
+            ⬆ JUMP (SPACE / TAP)
+          </button>
+        `);
+      }
+      jump() {
+        if (!this.isRunning || this.isPaused) return;
+        if (this.runner.grounded) {
+          this.runner.vy = -520;
+          this.runner.grounded = false;
+          SoundFX.play('jump');
+        }
+      }
+      onKeyDown(e) { if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); this.jump(); } }
+      onPointerDown() { this.jump(); }
+      update(dt) {
+        const W = this.canvas.width;
+        const speed = 280 + this.score * 0.35;
+        this.setScore(this.score + Math.floor(dt * 25));
+
+        this.runner.vy += 1450 * dt;
+        this.runner.y += this.runner.vy * dt;
+        if (this.runner.y >= this.groundY - this.runner.h) {
+          this.runner.y = this.groundY - this.runner.h;
+          this.runner.vy = 0;
+          this.runner.grounded = true;
+        }
+
+        this.timer += dt;
+        if (this.timer >= 1.25) {
+          this.timer = 0;
+          const h = 28 + Math.random() * 24;
+          this.obstacles.push({ x: W + 30, y: this.groundY - h, w: 24, h });
+          if (Math.random() < 0.65) {
+            this.coinsList.push({ x: W + 42, y: this.groundY - h - 42, r: 10 });
+          }
+        }
+
+        for (let i = this.obstacles.length - 1; i >= 0; i--) {
+          const o = this.obstacles[i];
+          o.x -= speed * dt;
+          if (this.runner.x + this.runner.w > o.x && this.runner.x < o.x + o.w &&
+              this.runner.y + this.runner.h > o.y) {
+            SoundFX.play('hit');
+            this.triggerGameOver(false);
+            return;
+          }
+          if (o.x + o.w < 0) this.obstacles.splice(i, 1);
+        }
+
+        for (let i = this.coinsList.length - 1; i >= 0; i--) {
+          const c = this.coinsList[i];
+          c.x -= speed * dt;
+          if (Math.hypot(this.runner.x + 14 - c.x, this.runner.y + 18 - c.y) < 26) {
+            this.addCoins(2);
+            SoundFX.play('coin');
+            this.coinsList.splice(i, 1);
+          } else if (c.x < -20) {
+            this.coinsList.splice(i, 1);
+          }
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#0c1324';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, this.groundY, W, H - this.groundY);
+
+        ctx.fillStyle = '#f43f5e';
+        for (const o of this.obstacles) ctx.fillRect(o.x, o.y, o.w, o.h);
+
+        ctx.fillStyle = '#facc15';
+        for (const c of this.coinsList) {
+          ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill();
+        }
+
+        ctx.fillStyle = '#00f0ff';
+        ctx.beginPath();
+        ctx.roundRect(this.runner.x, this.runner.y, this.runner.w, this.runner.h, 6);
+        ctx.fill();
+      }
+    }
+
+    /* =======================================================================
+       GAME 14: CAR RACING (3-LANE HIGHWAY)
+       ======================================================================= */
+    class CarRacingGame extends BaseGame {
+      init() {
+        this.skin = StorageManager.getSkin('vehicle');
+        this.lane = 1; // 0, 1, 2
+        this.traffic = [];
+        this.roadCoins = [];
+        this.timer = 0;
+        this.stripeY = 0;
+        this.setScore(0);
+        this.cb.setControls(`
+          <div class="flex gap-4">
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.switchLane(-1)" class="px-7 py-3 rounded-2xl bg-slate-800 active:bg-cyan-500 text-white font-bold">◀ LEFT</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.switchLane(1)" class="px-7 py-3 rounded-2xl bg-slate-800 active:bg-cyan-500 text-white font-bold">RIGHT ▶</button>
+          </div>
+        `);
+      }
+      switchLane(dir) {
+        if (!this.isRunning || this.isPaused) return;
+        this.lane = Math.max(0, Math.min(2, this.lane + dir));
+        SoundFX.play('click');
+      }
+      onKeyDown(e) {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') { e.preventDefault(); this.switchLane(-1); }
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') { e.preventDefault(); this.switchLane(1); }
+      }
+      onPointerDown(x) {
+        this.switchLane(x < this.canvas.width / 2 ? -1 : 1);
+      }
+      update(dt) {
+        const H = this.canvas.height;
+        const speed = 290 + this.score * 0.4;
+        this.stripeY = (this.stripeY + speed * dt) % 60;
+        this.setScore(this.score + Math.floor(dt * 20));
+
+        this.timer += dt;
+        if (this.timer >= Math.max(0.55, 1.05 - this.score * 0.0005)) {
+          this.timer = 0;
+          const tLane = Math.floor(Math.random() * 3);
+          this.traffic.push({ lane: tLane, y: -60 });
+          const cLane = (tLane + 1) % 3;
+          if (Math.random() < 0.7) this.roadCoins.push({ lane: cLane, y: -60 });
+        }
+
+        const playerY = H - 75;
+        for (let i = this.traffic.length - 1; i >= 0; i--) {
+          const t = this.traffic[i];
+          t.y += speed * dt;
+          if (t.lane === this.lane && Math.abs(t.y - playerY) < 52) {
+            SoundFX.play('hit');
+            this.triggerGameOver(false);
+            return;
+          }
+          if (t.y > H + 70) this.traffic.splice(i, 1);
+        }
+        for (let i = this.roadCoins.length - 1; i >= 0; i--) {
+          const c = this.roadCoins[i];
+          c.y += speed * dt;
+          if (c.lane === this.lane && Math.abs(c.y - playerY) < 42) {
+            this.addCoins(2);
+            SoundFX.play('coin');
+            this.roadCoins.splice(i, 1);
+          } else if (c.y > H + 40) {
+            this.roadCoins.splice(i, 1);
+          }
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#064e3b';
+        ctx.fillRect(0, 0, W, H);
+
+        const roadW = Math.min(320, W * 0.72);
+        const rx = (W - roadW) / 2;
+        const laneW = roadW / 3;
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(rx, 0, roadW, H);
+
+        // Lane dividers
+        ctx.fillStyle = '#94a3b8';
+        for (let l = 1; l <= 2; l++) {
+          for (let y = this.stripeY - 60; y < H; y += 60) {
+            ctx.fillRect(rx + l * laneW - 2, y, 4, 30);
+          }
+        }
+
+        // Coins
+        ctx.fillStyle = '#facc15';
+        for (const c of this.roadCoins) {
+          ctx.beginPath();
+          ctx.arc(rx + (c.lane + 0.5) * laneW, c.y, 11, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Traffic cars
+        for (const t of this.traffic) {
+          const cx = rx + (t.lane + 0.5) * laneW - 18;
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.roundRect(cx, t.y - 28, 36, 56, 8);
+          ctx.fill();
+        }
+
+        // Player Car
+        const px = rx + (this.lane + 0.5) * laneW - 18;
+        ctx.fillStyle = this.skin.color;
+        ctx.beginPath();
+        ctx.roundRect(px, H - 103, 36, 56, 8);
+        ctx.fill();
+      }
+    }
+
+    /* =======================================================================
+       GAME 15: BASKETBALL CHALLENGE
+       ======================================================================= */
+    class BasketballGame extends BaseGame {
+      init() {
+        const W = this.canvas.width, H = this.canvas.height;
+        this.hoop = { x: W / 2, y: 110, r: 34, dir: 1 };
+        this.ball = { x: W / 2, y: H - 55, vx: 0, vy: 0, r: 18, flying: false };
+        this.dragStart = null;
+        this.dragCurr = null;
+        this.shotsLeft = 10;
+        this.setScore(0);
+        this.cb.setControls(`<div class="text-xs text-slate-400">Drag &amp; release upward to shoot! (10 Balls)</div>`);
+      }
+      onPointerDown(x, y) {
+        if (!this.isRunning || this.isPaused || this.ball.flying) return;
+        this.dragStart = { x, y };
+        this.dragCurr = { x, y };
+      }
+      onPointerMove(x, y) {
+        if (this.dragStart) this.dragCurr = { x, y };
+      }
+      onPointerUp(x, y) {
+        if (!this.dragStart || this.ball.flying) return;
+        const dx = this.dragStart.x - x;
+        const dy = this.dragStart.y - y;
+        this.dragStart = null;
+        if (dy > 20) {
+          this.ball.vx = dx * 2.4;
+          this.ball.vy = -Math.min(780, dy * 3.2);
+          this.ball.flying = true;
+          SoundFX.play('jump');
+        }
+      }
+      update(dt) {
+        const W = this.canvas.width, H = this.canvas.height;
+        if (this.score >= 200) {
+          this.hoop.x += this.hoop.dir * 95 * dt;
+          if (this.hoop.x < 100 || this.hoop.x > W - 100) this.hoop.dir *= -1;
+        }
+        if (this.ball.flying) {
+          this.ball.vy += 880 * dt;
+          this.ball.x += this.ball.vx * dt;
+          this.ball.y += this.ball.vy * dt;
+
+          // Score check when falling through rim
+          if (this.ball.vy > 0 && Math.hypot(this.ball.x - this.hoop.x, this.ball.y - this.hoop.y) < 26) {
+            this.setScore(this.score + 100);
+            this.addCoins(5);
+            SoundFX.play('coin');
+            this.resetBall();
+            return;
+          }
+          if (this.ball.y > H + 30 || this.ball.x < -30 || this.ball.x > W + 30) {
+            this.shotsLeft--;
+            SoundFX.play('hit');
+            if (this.shotsLeft <= 0) {
+              this.triggerGameOver(this.score > 0);
+              return;
+            }
+            this.resetBall();
+          }
+        }
+      }
+      resetBall() {
+        const W = this.canvas.width, H = this.canvas.height;
+        this.ball = { x: W / 2, y: H - 55, vx: 0, vy: 0, r: 18, flying: false };
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(0, 0, W, H);
+
+        // Backboard & Rim
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(this.hoop.x - 45, this.hoop.y - 45, 90, 50);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(this.hoop.x - 20, this.hoop.y - 25, 40, 25);
+
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(this.hoop.x - this.hoop.r, this.hoop.y);
+        ctx.lineTo(this.hoop.x + this.hoop.r, this.hoop.y);
+        ctx.stroke();
+
+        // Aim line
+        if (this.dragStart && this.dragCurr) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath();
+          ctx.moveTo(this.ball.x, this.ball.y);
+          ctx.lineTo(this.ball.x + (this.dragStart.x - this.dragCurr.x), this.ball.y + (this.dragStart.y - this.dragCurr.y));
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Basketball
+        ctx.fillStyle = '#ea580c';
+        ctx.beginPath();
+        ctx.arc(this.ball.x, this.ball.y, this.ball.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = 'bold 13px Orbitron, sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'left';
+        ctx.fillText(`BALLS LEFT: ${this.shotsLeft}`, 16, 28);
+      }
+    }
+
+    /* =======================================================================
+       GAME 16: FOOTBALL PENALTY SHOOTOUT
+       ======================================================================= */
+    class FootballPenaltyGame extends BaseGame {
+      init() {
+        const W = this.canvas.width, H = this.canvas.height;
+        this.keeper = { x: W / 2, targetX: W / 2 };
+        this.ball = { x: W / 2, y: H - 55, tx: W / 2, ty: H - 55, kicking: false };
+        this.kicks = 5;
+        this.setScore(0);
+        this.cb.setControls(`<div class="text-xs text-slate-400">Tap inside the goal net to shoot past the keeper! (5 Kicks)</div>`);
+      }
+      onPointerDown(x, y) {
+        if (!this.isRunning || this.isPaused || this.ball.kicking) return;
+        const W = this.canvas.width;
+        const goalLeft = W * 0.22, goalRight = W * 0.78;
+        if (y < 190 && x >= goalLeft && x <= goalRight) {
+          this.ball.tx = x;
+          this.ball.ty = Math.max(70, y);
+          this.ball.kicking = true;
+          this.keeper.targetX = goalLeft + Math.random() * (goalRight - goalLeft);
+          SoundFX.play('jump');
+        }
+      }
+      update(dt) {
+        const W = this.canvas.width, H = this.canvas.height;
+        this.keeper.x += (this.keeper.targetX - this.keeper.x) * 6 * dt;
+        if (this.ball.kicking) {
+          this.ball.x += (this.ball.tx - this.ball.x) * 7 * dt;
+          this.ball.y += (this.ball.ty - this.ball.y) * 7 * dt;
+          if (Math.hypot(this.ball.x - this.ball.tx, this.ball.y - this.ball.ty) < 8) {
+            this.ball.kicking = false;
+            this.kicks--;
+            if (Math.abs(this.ball.x - this.keeper.x) > 42) {
+              this.setScore(this.score + 100);
+              this.addCoins(6);
+              SoundFX.play('coin');
+            } else {
+              SoundFX.play('hit');
+            }
+            if (this.kicks <= 0) {
+              setTimeout(() => this.triggerGameOver(this.score >= 300), 400);
+            } else {
+              this.ball = { x: W / 2, y: H - 55, tx: W / 2, ty: H - 55, kicking: false };
+            }
+          }
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#065f46';
+        ctx.fillRect(0, 0, W, H);
+
+        // Goal frame
+        const gx = W * 0.22, gw = W * 0.56;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(gx, 55, gw, 115);
+
+        // Keeper
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.roundRect(this.keeper.x - 24, 95, 48, 65, 10);
+        ctx.fill();
+
+        // Soccer ball
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(this.ball.x, this.ball.y, 15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = 'bold 13px Orbitron, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'left';
+        ctx.fillText(`KICKS LEFT: ${this.kicks}`, 16, 28);
+      }
+    }
+
+    /* =======================================================================
+       GAME 17: STACK TOWER
+       ======================================================================= */
+    class StackTowerGame extends BaseGame {
+      init() {
+        const W = this.canvas.width;
+        this.stack = [{ x: W / 2 - 90, w: 180, color: '#38bdf8' }];
+        this.curr = { x: 40, w: 180, dir: 1, speed: 240 };
+        this.setScore(0);
+        this.cb.setControls(`
+          <button onpointerdown="GameManager.activeGame && GameManager.activeGame.place()" class="px-8 py-3.5 rounded-2xl bg-fuchsia-500 text-white font-arcade font-black text-sm">
+            🧱 DROP BLOCK (SPACE / TAP)
+          </button>
+        `);
+      }
+      place() {
+        if (!this.isRunning || this.isPaused) return;
+        const top = this.stack[this.stack.length - 1];
+        const left = Math.max(top.x, this.curr.x);
+        const right = Math.min(top.x + top.w, this.curr.x + this.curr.w);
+        const overlap = right - left;
+
+        if (overlap <= 4) {
+          SoundFX.play('hit');
+          this.triggerGameOver(false);
+          return;
+        }
+        const colors = ['#38bdf8', '#818cf8', '#c084fc', '#f472b6', '#fb7185', '#facc15', '#4ade80'];
+        this.stack.push({ x: left, w: overlap, color: colors[this.stack.length % colors.length] });
+        this.setScore(this.score + 50);
+        this.addCoins(2);
+        SoundFX.play('coin');
+        this.curr = {
+          x: 20,
+          w: overlap,
+          dir: 1,
+          speed: Math.min(480, 240 + this.stack.length * 12)
+        };
+      }
+      onKeyDown(e) { if (e.code === 'Space') { e.preventDefault(); this.place(); } }
+      onPointerDown() { this.place(); }
+      update(dt) {
+        const W = this.canvas.width;
+        this.curr.x += this.curr.dir * this.curr.speed * dt;
+        if (this.curr.x + this.curr.w > W - 20) { this.curr.x = W - 20 - this.curr.w; this.curr.dir = -1; }
+        if (this.curr.x < 20) { this.curr.x = 20; this.curr.dir = 1; }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#090d1a';
+        ctx.fillRect(0, 0, W, H);
+        const bh = 24;
+        const visible = this.stack.slice(-11);
+        visible.forEach((b, i) => {
+          const y = H - 35 - i * bh;
+          ctx.fillStyle = b.color;
+          ctx.fillRect(b.x, y, b.w, bh - 2);
+        });
+        const currY = H - 35 - visible.length * bh;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(this.curr.x, currY, this.curr.w, bh - 2);
+      }
+    }
+
+    /* =======================================================================
+       GAME 18: COLOR SWITCH
+       ======================================================================= */
+    class ColorSwitchGame extends BaseGame {
+      init() {
+        const W = this.canvas.width, H = this.canvas.height;
+        this.colors = ['#00f0ff', '#f43f5e', '#facc15', '#a855f7'];
+        this.ball = { x: W / 2, y: H - 65, vy: 0, colorIdx: 0 };
+        this.ring = { x: W / 2, y: H * 0.42, r: 72, angle: 0 };
+        this.setScore(0);
+        this.cb.setControls(`
+          <button onpointerdown="GameManager.activeGame && GameManager.activeGame.bounce()" class="px-8 py-3.5 rounded-2xl bg-cyan-400 text-slate-950 font-arcade font-black text-sm">
+            ⬆ BOUNCE (SPACE / TAP)
+          </button>
+        `);
+      }
+      bounce() {
+        if (!this.isRunning || this.isPaused) return;
+        this.ball.vy = -330;
+        SoundFX.play('jump');
+      }
+      onKeyDown(e) { if (e.code === 'Space') { e.preventDefault(); this.bounce(); } }
+      onPointerDown() { this.bounce(); }
+      update(dt) {
+        const H = this.canvas.height;
+        this.ring.angle = (this.ring.angle + 2.1 * dt) % (Math.PI * 2);
+        this.ball.vy += 880 * dt;
+        this.ball.y += this.ball.vy * dt;
+
+        if (this.ball.y > H - 25) {
+          this.ball.y = H - 25;
+          this.ball.vy = 0;
+        }
+
+        // Check ring arc collision at bottom & top of ring
+        const dist = Math.abs(this.ball.y - this.ring.y);
+        if (Math.abs(dist - this.ring.r) < 12) {
+          const isBottom = this.ball.y > this.ring.y;
+          const checkAngle = ((isBottom ? Math.PI / 2 : -Math.PI / 2) - this.ring.angle + Math.PI * 4) % (Math.PI * 2);
+          const segIdx = Math.floor(checkAngle / (Math.PI / 2)) % 4;
+          if (segIdx !== this.ball.colorIdx) {
+            SoundFX.play('hit');
+            this.triggerGameOver(false);
+            return;
+          }
+        }
+
+        // Passed through center of ring
+        if (this.ball.y < this.ring.y - this.ring.r - 20) {
+          this.setScore(this.score + 100);
+          this.addCoins(4);
+          SoundFX.play('coin');
+          this.ball.y = H - 65;
+          this.ball.vy = 0;
+          this.ball.colorIdx = (this.ball.colorIdx + 1) % 4;
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#070a14';
+        ctx.fillRect(0, 0, W, H);
+
+        // 4-color rotating ring
+        ctx.lineWidth = 14;
+        for (let i = 0; i < 4; i++) {
+          ctx.strokeStyle = this.colors[i];
+          ctx.beginPath();
+          ctx.arc(this.ring.x, this.ring.y, this.ring.r, this.ring.angle + i * (Math.PI / 2), this.ring.angle + (i + 1) * (Math.PI / 2));
+          ctx.stroke();
+        }
+
+        // Ball
+        ctx.fillStyle = this.colors[this.ball.colorIdx];
+        ctx.beginPath();
+        ctx.arc(this.ball.x, this.ball.y, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* =======================================================================
+       GAME 19: MAZE ESCAPE
+       ======================================================================= */
+    class MazeEscapeGame extends BaseGame {
+      init() {
+        this.cols = 13;
+        this.rows = 9;
+        this.maze = Array.from({ length: this.rows }, () => Array(this.cols).fill(1));
+        this.carve(1, 1);
+        this.player = { x: 1, y: 1 };
+        this.exit = { x: this.cols - 2, y: this.rows - 2 };
+        this.maze[this.exit.y][this.exit.x] = 0;
+        this.elapsed = 0;
+        this.setScore(0);
+        this.cb.setControls(`
+          <div class="grid grid-cols-3 gap-1.5 w-36">
+            <div></div>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.step(0,-1)" class="p-3 rounded-xl bg-slate-800 text-white font-bold">▲</button>
+            <div></div>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.step(-1,0)" class="p-3 rounded-xl bg-slate-800 text-white font-bold">◀</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.step(0,1)" class="p-3 rounded-xl bg-slate-800 text-white font-bold">▼</button>
+            <button onpointerdown="GameManager.activeGame && GameManager.activeGame.step(1,0)" class="p-3 rounded-xl bg-slate-800 text-white font-bold">▶</button>
+          </div>
+        `);
+      }
+      carve(x, y) {
+        this.maze[y][x] = 0;
+        const dirs = [[0, -2], [2, 0], [0, 2], [-2, 0]].sort(() => Math.random() - 0.5);
+        for (const [dx, dy] of dirs) {
+          const nx = x + dx, ny = y + dy;
+          if (nx > 0 && nx < this.cols - 1 && ny > 0 && ny < this.rows - 1 && this.maze[ny][nx] === 1) {
+            this.maze[y + dy / 2][x + dx / 2] = 0;
+            this.carve(nx, ny);
+          }
+        }
+      }
+      step(dx, dy) {
+        if (!this.isRunning || this.isPaused) return;
+        const nx = this.player.x + dx, ny = this.player.y + dy;
+        if (this.maze[ny] && this.maze[ny][nx] === 0) {
+          this.player.x = nx;
+          this.player.y = ny;
+          SoundFX.play('click');
+          if (nx === this.exit.x && ny === this.exit.y) {
+            const pts = Math.max(100, 500 - Math.floor(this.elapsed * 15));
+            this.setScore(pts);
+            this.addCoins(15);
+            SoundFX.play('win');
+            this.triggerGameOver(true);
+          }
+        }
+      }
+      onKeyDown(e) {
+        if (e.code === 'ArrowUp') { e.preventDefault(); this.step(0, -1); }
+        if (e.code === 'ArrowDown') { e.preventDefault(); this.step(0, 1); }
+        if (e.code === 'ArrowLeft') { e.preventDefault(); this.step(-1, 0); }
+        if (e.code === 'ArrowRight') { e.preventDefault(); this.step(1, 0); }
+      }
+      update(dt) { this.elapsed += dt; }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#070a14';
+        ctx.fillRect(0, 0, W, H);
+        const cs = Math.min((W - 40) / this.cols, (H - 30) / this.rows);
+        const ox = (W - cs * this.cols) / 2, oy = (H - cs * this.rows) / 2;
+
+        for (let r = 0; r < this.rows; r++) {
+          for (let c = 0; c < this.cols; c++) {
+            ctx.fillStyle = this.maze[r][c] === 1 ? '#1e293b' : '#0f172a';
+            ctx.fillRect(ox + c * cs, oy + r * cs, cs, cs);
+          }
+        }
+        // Exit portal
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(ox + this.exit.x * cs + 4, oy + this.exit.y * cs + 4, cs - 8, cs - 8);
+
+        // Player
+        ctx.fillStyle = '#00f0ff';
+        ctx.beginPath();
+        ctx.arc(ox + (this.player.x + 0.5) * cs, oy + (this.player.y + 0.5) * cs, cs * 0.34, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* =======================================================================
+       GAME 20: KNIFE HIT
+       ======================================================================= */
+    class KnifeHitGame extends BaseGame {
+      init() {
+        this.logAngle = 0;
+        this.stuckAngles = [0, Math.PI];
+        this.flyingKnife = null;
+        this.knivesLeft = 7;
+        this.setScore(0);
+        this.cb.setControls(`
+          <button onpointerdown="GameManager.activeGame && GameManager.activeGame.throwKnife()" class="px-8 py-3.5 rounded-2xl bg-amber-400 text-slate-950 font-arcade font-black text-sm">
+            🗡️ THROW KNIFE (SPACE / TAP)
+          </button>
+        `);
+      }
+      throwKnife() {
+        if (!this.isRunning || this.isPaused || this.flyingKnife) return;
+        this.flyingKnife = { y: this.canvas.height - 55 };
+        SoundFX.play('shoot');
+      }
+      onKeyDown(e) { if (e.code === 'Space') { e.preventDefault(); this.throwKnife(); } }
+      onPointerDown() { this.throwKnife(); }
+      update(dt) {
+        const H = this.canvas.height;
+        const logY = H * 0.36;
+        const logR = 54;
+        this.logAngle = (this.logAngle + (1.8 + this.score * 0.002) * dt) % (Math.PI * 2);
+
+        if (this.flyingKnife) {
+          this.flyingKnife.y -= 780 * dt;
+          if (this.flyingKnife.y <= logY + logR) {
+            const hitAngle = (Math.PI / 2 - this.logAngle + Math.PI * 4) % (Math.PI * 2);
+            const collision = this.stuckAngles.some(a => {
+              const diff = Math.abs(((a - hitAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+              return diff < 0.28;
+            });
+            this.flyingKnife = null;
+            if (collision) {
+              SoundFX.play('hit');
+              this.triggerGameOver(false);
+              return;
+            }
+            this.stuckAngles.push(hitAngle);
+            this.knivesLeft--;
+            this.setScore(this.score + 50);
+            this.addCoins(3);
+            SoundFX.play('coin');
+            if (this.knivesLeft <= 0) {
+              // Next stage!
+              this.knivesLeft = 7;
+              this.stuckAngles = [Math.random() * Math.PI];
+              this.setScore(this.score + 150);
+            }
+          }
+        }
+      }
+      draw() {
+        const ctx = this.ctx, W = this.canvas.width, H = this.canvas.height;
+        ctx.fillStyle = '#090d1a';
+        ctx.fillRect(0, 0, W, H);
+        const cx = W / 2, cy = H * 0.36, r = 54;
+
+        // Stuck knives
+        for (const a of this.stuckAngles) {
+          const ang = this.logAngle + a;
+          ctx.save();
+          ctx.translate(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r);
+          ctx.rotate(ang - Math.PI / 2);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillRect(-3, 0, 6, 36);
+          ctx.restore();
+        }
+
+        // Wooden Target Log
+        ctx.fillStyle = '#92400e';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#d97706';
+        ctx.stroke();
+
+        // Active / Ready Knife
+        const ky = this.flyingKnife ? this.flyingKnife.y : H - 55;
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(cx - 4, ky, 8, 38);
+
+        ctx.font = 'bold 13px Orbitron, sans-serif';
+        ctx.fillStyle = '#fbbf24';
+        ctx.textAlign = 'left';
+        ctx.fillText(`KNIVES: ${this.knivesLeft}`, 16, 28);
+      }
+    }
+
+    /**
+     * 6. REGISTRY OF ALL 20 GAMES
+     */
+    const GAMES_CATALOG = [
+      { id: 'flappy', title: 'Flappy Bird', category: 'Arcade', icon: '🐦', gradient: 'from-sky-500 to-emerald-500', desc: 'Fly through green pipes and collect gold coins!', hint: 'Tap / Click / SPACE to Flap', skinCat: 'flappy', cls: FlappyBirdGame },
+      { id: 'snake', title: 'Neon Snake', category: 'Classic', icon: '🐍', gradient: 'from-emerald-500 to-teal-700', desc: 'Eat glowing orbs and grow your neon viper.', hint: 'Arrow Keys / WASD / D-Pad', skinCat: 'snake', cls: SnakeGame },
+      { id: 'tetris', title: 'Tetris', category: 'Puzzle', icon: '🧱', gradient: 'from-purple-600 to-indigo-700', desc: 'Stack and clear falling tetromino lines.', hint: 'Arrows to Move & Rotate', cls: TetrisGame },
+      { id: '2048', title: '2048', category: 'Puzzle', icon: '🔢', gradient: 'from-amber-500 to-orange-600', desc: 'Slide & merge matching number tiles to 2048.', hint: 'Swipe or Arrow Keys', cls: Game2048 },
+      { id: 'breakout', title: 'Breakout', category: 'Arcade', icon: '🧱', gradient: 'from-rose-500 to-pink-700', desc: 'Smash all neon brick rows with your energy paddle.', hint: 'Drag Paddle or Arrow Keys', skinCat: 'paddle', cls: BreakoutGame },
+      { id: 'pong', title: 'Cyber Pong', category: 'Classic', icon: '🏓', gradient: 'from-cyan-500 to-blue-700', desc: 'Outsmart the AI paddle in a fast 5-point duel.', hint: 'Drag Up & Down', skinCat: 'paddle', cls: PongGame },
+      { id: 'memory', title: 'Memory Cards', category: 'Puzzle', icon: '🃏', gradient: 'from-indigo-500 to-purple-700', desc: 'Flip cards and match all 8 arcade pairs.', hint: 'Tap Cards to Match', cls: MemoryCardsGame },
+      { id: 'minesweeper', title: 'Minesweeper', category: 'Classic', icon: '💣', gradient: 'from-slate-600 to-slate-800', desc: 'Uncover safe tiles and flag all 10 hidden mines.', hint: 'Tap to Reveal • Toggle Flag Mode', cls: MinesweeperGame },
+      { id: 'tictactoe', title: 'Tic Tac Toe', category: 'Classic', icon: '❌', gradient: 'from-cyan-600 to-teal-800', desc: 'Challenge tactical AI on the 3x3 grid.', hint: 'Tap Square to Place X', cls: TicTacToeGame },
+      { id: 'rps', title: 'Rock Paper Scissors', category: 'Classic', icon: '✂️', gradient: 'from-fuchsia-600 to-rose-700', desc: 'Best-of-5 showdown against the AI.', hint: 'Pick Rock, Paper, or Scissors', cls: RockPaperScissorsGame },
+      { id: 'spaceshooter', title: 'Space Shooter', category: 'Action', icon: '🚀', gradient: 'from-blue-600 to-indigo-900', desc: 'Blast waves of invading pixel aliens.', hint: 'Drag Starfighter Left/Right', skinCat: 'vehicle', cls: SpaceShooterGame },
+      { id: 'asteroids', title: 'Asteroid Survival', category: 'Action', icon: '☄️', gradient: 'from-stone-600 to-slate-900', desc: 'Pilot your pod through a lethal meteor storm.', hint: 'Drag Anywhere to Dodge', cls: AsteroidSurvivalGame },
+      { id: 'runner', title: 'Endless Runner', category: 'Arcade', icon: '🏃', gradient: 'from-teal-500 to-emerald-800', desc: 'Sprint, leap hurdles, and grab mid-air coins.', hint: 'Tap / SPACE to Jump', cls: EndlessRunnerGame },
+      { id: 'racing', title: 'Car Racing', category: 'Action', icon: '🏎️', gradient: 'from-red-600 to-amber-700', desc: 'Weave through 3-lane highway traffic & collect coins.', hint: 'Tap Left/Right or Arrow Keys', skinCat: 'vehicle', cls: CarRacingGame },
+      { id: 'basketball', title: 'Basketball Challenge', category: 'Sports', icon: '🏀', gradient: 'from-orange-500 to-red-700', desc: 'Swipe to arc shots into the hoop.', hint: 'Drag & Release Upward', cls: BasketballGame },
+      { id: 'penalty', title: 'Football Penalty', category: 'Sports', icon: '⚽', gradient: 'from-emerald-600 to-green-900', desc: 'Curve penalty kicks past the diving goalkeeper.', hint: 'Tap Target Corner in Net', cls: FootballPenaltyGame },
+      { id: 'stack', title: 'Stack Tower', category: 'Arcade', icon: '🏗️', gradient: 'from-violet-600 to-fuchsia-800', desc: 'Time your drops to build the tallest neon tower.', hint: 'Tap / SPACE to Drop Block', cls: StackTowerGame },
+      { id: 'colorswitch', title: 'Color Switch', category: 'Arcade', icon: '🎨', gradient: 'from-pink-500 to-cyan-600', desc: 'Bounce only through matching colored ring segments.', hint: 'Tap / SPACE to Bounce', cls: ColorSwitchGame },
+      { id: 'maze', title: 'Maze Escape', category: 'Puzzle', icon: '🌀', gradient: 'from-emerald-500 to-cyan-800', desc: 'Navigate the procedural labyrinth to the green portal.', hint: 'Arrow Keys or D-Pad', cls: MazeEscapeGame },
+      { id: 'knifehit', title: 'Knife Hit', category: 'Action', icon: '🗡️', gradient: 'from-amber-600 to-stone-800', desc: 'Hurl knives into the spinning log without colliding.', hint: 'Tap / SPACE to Throw', cls: KnifeHitGame }
+    ];
+
+    /**
+     * 7. GAME MANAGER (HANDLES CANVAS LIFECYCLE, LOOP, & OVERLAYS)
+     */
+    const GameManager = {
+      currentMeta: null,
+      activeGame: null,
+      rafId: null,
+      canvas: null,
+      ctx: null,
+
+      init() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.bindEvents();
+      },
+
+      resizeCanvas() {
+        const stage = document.getElementById('canvasStage');
+        if (!stage || !this.canvas) return;
+        const rect = stage.getBoundingClientRect();
+        this.canvas.width = Math.max(320, Math.floor(rect.width));
+        this.canvas.height = Math.max(240, Math.floor(rect.height));
+        if (this.activeGame && !this.activeGame.isRunning) {
+          this.activeGame.draw();
+        }
+      },
+
+      launchRandomGame() {
+        const pick = GAMES_CATALOG[Math.floor(Math.random() * GAMES_CATALOG.length)];
+        this.launchGame(pick.id);
+      },
+
+      launchGame(gameId) {
+        const meta = GAMES_CATALOG.find(g => g.id === gameId);
+        if (!meta) return;
+        SoundFX.play('click');
+
+        this.currentMeta = meta;
+        document.getElementById('lobbyView').classList.add('hidden');
+        document.getElementById('gameArenaView').classList.remove('hidden');
+
+        document.getElementById('activeGameTitle').textContent = meta.title.toUpperCase();
+        document.getElementById('activeGameHint').textContent = meta.hint;
+        document.getElementById('hudScore').textContent = '0';
+        document.getElementById('hudBest').textContent = StorageManager.state.highScores[meta.id] || 0;
+
+        // Extra HUD box for coin-collecting games
+        const extraBox = document.getElementById('hudExtraBox');
+        if (['flappy', 'snake', 'runner', 'racing', 'spaceshooter'].includes(meta.id)) {
+          extraBox.classList.remove('hidden');
+          document.getElementById('hudExtraVal').textContent = '0';
+        } else {
+          extraBox.classList.add('hidden');
+        }
+
+        this.resizeCanvas();
+        this.prepareInstance();
+        this.showStartOverlay();
+      },
+
+      prepareInstance() {
+        if (this.activeGame) this.activeGame.destroy();
+        if (this.rafId) cancelAnimationFrame(this.rafId);
+
+        const GameClass = this.currentMeta.cls;
+        this.activeGame = new GameClass(this.canvas, this.ctx, {
+          onScore: (s) => {
+            document.getElementById('hudScore').textContent = s;
+            const best = Math.max(s, StorageManager.state.highScores[this.currentMeta.id] || 0);
+            document.getElementById('hudBest').textContent = best;
+          },
+          onCoins: (c) => {
+            document.getElementById('hudExtraVal').textContent = c;
+          },
+          onGameOver: (res) => this.handleGameOver(res),
+          setControls: (html) => {
+            document.getElementById('mobileControlsBar').innerHTML = html;
+          }
+        });
+        this.activeGame.init();
+        this.activeGame.draw();
+      },
+
+      showStartOverlay() {
+        const meta = this.currentMeta;
+        document.getElementById('startIcon').textContent = meta.icon;
+        document.getElementById('startTitle').textContent = meta.title.toUpperCase();
+        document.getElementById('startDesc').textContent = meta.desc;
+
+        // Skin picker if applicable
+        const pickerWrap = document.getElementById('startSkinPicker');
+        const skinList = document.getElementById('startSkinList');
+        if (meta.skinCat) {
+          pickerWrap.classList.remove('hidden');
+          const skins = SHOP_CATALOG.filter(s => s.category === meta.skinCat);
+          skinList.innerHTML = skins.map(s => {
+            const unlocked = StorageManager.state.unlockedSkins.includes(s.id);
+            const equipped = StorageManager.state.equippedSkins[meta.skinCat] === s.id;
+            return `
+              <button onclick="GameManager.selectSkinInGame('${meta.skinCat}', '${s.id}')"
+                class="px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
+                  equipped ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200' :
+                  unlocked ? 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500' :
+                  'bg-slate-900/60 border-slate-800 text-slate-500 cursor-not-allowed'
+                }">
+                <span>${s.icon}</span>
+                <span>${s.name}</span>
+                ${!unlocked ? '<span>🔒</span>' : ''}
+              </button>
+            `;
+          }).join('');
+        } else {
+          pickerWrap.classList.add('hidden');
+        }
+
+        document.getElementById('overlayStart').classList.remove('hidden');
+        document.getElementById('overlayPause').classList.add('hidden');
+        document.getElementById('overlayGameOver').classList.add('hidden');
+      },
+
+      selectSkinInGame(cat, skinId) {
+        if (!StorageManager.state.unlockedSkins.includes(skinId)) {
+          App.showToast('Unlock this skin in the Cosmetic Shop!', 'gold');
+          return;
+        }
+        StorageManager.state.equippedSkins[cat] = skinId;
+        StorageManager.save();
+        this.prepareInstance();
+        this.showStartOverlay();
+      },
+
+      startCurrentGame() {
+        SoundFX.play('click');
+        document.getElementById('overlayStart').classList.add('hidden');
+        document.getElementById('overlayPause').classList.add('hidden');
+        document.getElementById('overlayGameOver').classList.add('hidden');
+
+        this.activeGame.start();
+        this.activeGame.lastTime = performance.now();
+
+        const loop = (now) => {
+          if (!this.activeGame || !this.activeGame.isRunning) return;
+          if (!this.activeGame.isPaused) {
+            const dt = Math.min(0.05, (now - this.activeGame.lastTime) / 1000);
+            this.activeGame.lastTime = now;
+            this.activeGame.update(dt);
+            if (this.activeGame.isRunning) this.activeGame.draw();
+          }
+          this.rafId = requestAnimationFrame(loop);
+        };
+        this.rafId = requestAnimationFrame(loop);
+      },
+
+      togglePause() {
+        if (!this.activeGame || !this.activeGame.isRunning) return;
+        if (this.activeGame.isPaused) {
+          this.activeGame.resume();
+          document.getElementById('overlayPause').classList.add('hidden');
+          document.getElementById('gamePauseBtn').textContent = '⏸ Pause';
+        } else {
+          this.activeGame.pause();
+          document.getElementById('overlayPause').classList.remove('hidden');
+          document.getElementById('gamePauseBtn').textContent = '▶ Resume';
+        }
+      },
+
+      restartCurrentGame() {
+        SoundFX.play('click');
+        this.prepareInstance();
+        this.startCurrentGame();
+      },
+
+      handleGameOver({ score, coins, won }) {
+        const bonusCoins = Math.max(2, Math.floor(score / 40));
+        const totalCoins = coins + bonusCoins;
+        const xpEarned = Math.max(15, Math.floor(score / 8) + 20);
+
+        StorageManager.recordMatch(this.currentMeta.id, score, totalCoins, xpEarned);
+
+        const best = StorageManager.state.highScores[this.currentMeta.id] || score;
+        document.getElementById('goBadge').textContent = won ? 'Victory!' : 'Game Over';
+        document.getElementById('goTitle').textContent = won ? 'STAGE CLEARED!' : 'WELL PLAYED!';
+        document.getElementById('goScore').textContent = score;
+        document.getElementById('goBest').textContent = best;
+        document.getElementById('goCoins').textContent = `+${totalCoins}`;
+        document.getElementById('goXp').textContent = `+${xpEarned}`;
+
+        document.getElementById('overlayGameOver').classList.remove('hidden');
+      },
+
+      exitToLobby() {
+        if (this.activeGame) this.activeGame.destroy();
+        if (this.rafId) cancelAnimationFrame(this.rafId);
+        this.activeGame = null;
+        document.getElementById('gameArenaView').classList.add('hidden');
+        document.getElementById('lobbyView').classList.remove('hidden');
+        App.renderDashboard();
+      },
+
+      getCanvasCoords(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+          x: (clientX - rect.left) * (this.canvas.width / rect.width),
+          y: (clientY - rect.top) * (this.canvas.height / rect.height)
+        };
+      },
+
+      bindEvents() {
+        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('keydown', (e) => {
+          if (this.activeGame && this.activeGame.isRunning) this.activeGame.onKeyDown(e);
+        });
+        window.addEventListener('keyup', (e) => {
+          if (this.activeGame && this.activeGame.isRunning) this.activeGame.onKeyUp(e);
+        });
+
+        this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        this.canvas.addEventListener('pointerdown', (e) => {
+          if (!this.activeGame || !this.activeGame.isRunning) return;
+          const pt = this.getCanvasCoords(e);
+          this.activeGame.onPointerDown(pt.x, pt.y, e);
+        });
+        this.canvas.addEventListener('pointermove', (e) => {
+          if (!this.activeGame || !this.activeGame.isRunning) return;
+          const pt = this.getCanvasCoords(e);
+          this.activeGame.onPointerMove(pt.x, pt.y, e);
+        });
+        window.addEventListener('pointerup', (e) => {
+          if (!this.activeGame || !this.activeGame.isRunning) return;
+          const pt = this.getCanvasCoords(e);
+          this.activeGame.onPointerUp(pt.x, pt.y, e);
+        });
+      }
+    };
+
+    /**
+     * 8. MAIN UI & DASHBOARD CONTROLLER
+     */
+    const App = {
+      selectedCategory: 'All',
+      searchQuery: '',
+
+      init() {
+        StorageManager.load();
+        YandexSDK.init();
+        GameManager.init();
+        this.initBackgroundAnimation();
+        this.bindLobbyEvents();
+        this.updateHeaderUI();
+        this.renderDashboard();
+      },
+
+      goHome() {
+        if (!document.getElementById('gameArenaView').classList.contains('hidden')) {
+          GameManager.exitToLobby();
+        }
+      },
+
+      bindLobbyEvents() {
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            SoundFX.play('click');
+            document.querySelectorAll('.cat-btn').forEach(b => {
+              b.classList.remove('bg-cyan-500', 'text-slate-950');
+              b.classList.add('bg-slate-800/80', 'text-slate-300');
+            });
+            btn.classList.remove('bg-slate-800/80', 'text-slate-300');
+            btn.classList.add('bg-cyan-500', 'text-slate-950');
+            this.selectedCategory = btn.dataset.cat;
+            this.renderGamesGrid();
+          });
+        });
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+          this.searchQuery = e.target.value.trim().toLowerCase();
+          this.renderGamesGrid();
+        });
+      },
+
+      updateHeaderUI() {
+        const s = StorageManager.state;
+        document.getElementById('headerAvatar').textContent = s.profile.avatar;
+        document.getElementById('headerPlayerName').textContent = s.profile.name;
+        document.getElementById('headerLevelBadge').textContent = `LVL ${s.profile.level}`;
+        const needed = s.profile.level * 150;
+        const pct = Math.min(100, Math.round((s.profile.xp / needed) * 100));
+        document.getElementById('headerXpBar').style.width = `${pct}%`;
+        document.getElementById('headerCoins').textContent = s.coins;
+
+        document.getElementById('statTotalPlayed').textContent = s.totalMatches;
+        document.getElementById('statAchievementsCount').textContent = `${s.achievements.length}/${ACHIEVEMENTS_LIST.length}`;
+
+        // Daily button cooldown check (24h)
+        const dayMs = 24 * 60 * 60 * 1000;
+        const ready = Date.now() - s.lastDailyClaim >= dayMs;
+        const dailyBtn = document.getElementById('dailyRewardBtn');
+        if (ready) {
+          dailyBtn.classList.remove('opacity-50');
+        } else {
+          dailyBtn.classList.add('opacity-60');
+        }
+      },
+
+      claimDailyReward() {
+        const dayMs = 24 * 60 * 60 * 1000;
+        const diff = Date.now() - StorageManager.state.lastDailyClaim;
+        if (diff < dayMs) {
+          const hrs = Math.ceil((dayMs - diff) / (1000 * 60 * 60));
+          this.showToast(`Daily gift already claimed! Come back in ~${hrs}h.`, 'cyan');
+          return;
+        }
+        StorageManager.state.lastDailyClaim = Date.now();
+        StorageManager.addCoins(150);
+        StorageManager.addXP(75);
+        SoundFX.play('win');
+        this.showToast('🎁 Daily Reward Claimed: +150 Coins & +75 XP!', 'gold');
+      },
+
+      toggleFavorite(e, gameId) {
+        e.stopPropagation();
+        SoundFX.play('click');
+        const favs = StorageManager.state.favorites;
+        const idx = favs.indexOf(gameId);
+        if (idx >= 0) favs.splice(idx, 1);
+        else favs.push(gameId);
+        StorageManager.save();
+        this.renderGamesGrid();
+      },
+
+      renderDashboard() {
+        this.renderRecentStrip();
+        this.renderGamesGrid();
+      },
+
+      renderRecentStrip() {
+        const recent = StorageManager.state.recent;
+        const sec = document.getElementById('recentSection');
+        const row = document.getElementById('recentGamesRow');
+        if (!recent.length) {
+          sec.classList.add('hidden');
+          return;
+        }
+        sec.classList.remove('hidden');
+        row.innerHTML = recent.map(id => {
+          const g = GAMES_CATALOG.find(item => item.id === id);
+          if (!g) return '';
+          return `
+            <button onclick="GameManager.launchGame('${g.id}')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl glass-panel hover:border-cyan-400/50 transition shrink-0">
+              <span class="text-xl">${g.icon}</span>
+              <div class="text-left">
+                <div class="text-xs font-bold text-white">${g.title}</div>
+                <div class="text-[10px] text-amber-300">Best: ${StorageManager.state.highScores[g.id] || 0}</div>
+              </div>
+            </button>
+          `;
+        }).join('');
+      },
+
+      renderGamesGrid() {
+        const grid = document.getElementById('gamesGrid');
+        const empty = document.getElementById('emptySearchState');
+        const favs = StorageManager.state.favorites;
+
+        const filtered = GAMES_CATALOG.filter(g => {
+          const matchCat = this.selectedCategory === 'All' ||
+            (this.selectedCategory === 'Favorites' && favs.includes(g.id)) ||
+            g.category === this.selectedCategory;
+          const matchSearch = !this.searchQuery ||
+            g.title.toLowerCase().includes(this.searchQuery) ||
+            g.desc.toLowerCase().includes(this.searchQuery);
+          return matchCat && matchSearch;
+        });
+
+        if (!filtered.length) {
+          grid.innerHTML = '';
+          empty.classList.remove('hidden');
+          return;
+        }
+        empty.classList.add('hidden');
+
+        grid.innerHTML = filtered.map(g => {
+          const isFav = favs.includes(g.id);
+          const best = StorageManager.state.highScores[g.id] || 0;
+          return `
+            <div onclick="GameManager.launchGame('${g.id}')" class="game-card cursor-pointer glass-panel rounded-3xl overflow-hidden flex flex-col justify-between group">
+              <!-- Procedural Gradient Thumbnail Header -->
+              <div class="relative h-36 bg-gradient-to-br ${g.gradient} p-4 flex items-center justify-center overflow-hidden">
+                <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:14px_14px]"></div>
+                <span class="text-6xl transform group-hover:scale-110 transition duration-300 drop-shadow-lg">${g.icon}</span>
+
+                <!-- Category Tag -->
+                <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-slate-950/60 backdrop-blur-md text-[10px] font-bold uppercase tracking-wider text-white">
+                  ${g.category}
+                </span>
+
+                <!-- Favorite Heart -->
+                <button onclick="App.toggleFavorite(event, '${g.id}')" class="absolute top-3 right-3 w-8 h-8 rounded-xl bg-slate-950/60 hover:bg-slate-950 flex items-center justify-center text-sm transition" title="Favorite">
+                  ${isFav ? '❤️' : '🤍'}
+                </button>
+              </div>
+
+              <!-- Card Body -->
+              <div class="p-4 flex-1 flex flex-col justify-between space-y-4">
+                <div>
+                  <div class="flex items-center justify-between gap-2">
+                    <h3 class="font-arcade font-extrabold text-base text-white group-hover:text-cyan-300 transition">${g.title}</h3>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-1 line-clamp-2">${g.desc}</p>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                  <div class="text-xs">
+                    <span class="text-slate-500">Best:</span>
+                    <span class="font-arcade font-bold text-amber-300 ml-1">${best}</span>
+                  </div>
+                  <span class="px-4 py-1.5 rounded-xl bg-cyan-500/20 group-hover:bg-cyan-400 text-cyan-300 group-hover:text-slate-950 font-arcade font-bold text-xs transition">
+                    ▶ PLAY
+                  </span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      },
+
+      openModal(modalId) {
+        SoundFX.play('click');
+        document.getElementById('modalBackdrop').classList.remove('hidden');
+        ['shopModal', 'statsModal', 'profileModal'].forEach(id => {
+          document.getElementById(id).classList.toggle('hidden', id !== modalId);
+        });
+        if (modalId === 'shopModal') this.renderShop();
+        if (modalId === 'statsModal') this.renderStatsModal();
+        if (modalId === 'profileModal') this.renderProfileModal();
+      },
+
+      closeModals() {
+        document.getElementById('modalBackdrop').classList.add('hidden');
+      },
+
+      renderShop() {
+        document.getElementById('shopCoinsDisplay').textContent = StorageManager.state.coins;
+        const grid = document.getElementById('shopItemsGrid');
+        grid.innerHTML = SHOP_CATALOG.map(item => {
+          const unlocked = StorageManager.state.unlockedSkins.includes(item.id);
+          const equipped = StorageManager.state.equippedSkins[item.category] === item.id;
+          return `
+            <div class="bg-slate-900/90 border ${equipped ? 'border-cyan-400' : 'border-slate-800'} rounded-2xl p-4 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-inner" style="background:${item.color}33; border: 2px solid ${item.color}">
+                  ${item.icon}
+                </div>
+                <div>
+                  <div class="text-sm font-bold text-white">${item.name}</div>
+                  <div class="text-[11px] text-slate-400">${item.desc}</div>
+                  <div class="text-[10px] uppercase text-cyan-400 mt-0.5">For: ${item.category}</div>
+                </div>
+              </div>
+              <div>
+                ${equipped ? `<span class="px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-300 text-xs font-bold">Equipped</span>` :
+                  unlocked ? `<button onclick="App.equipShopItem('${item.id}')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">Equip</button>` :
+                  `<button onclick="App.buyShopItem('${item.id}')" class="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-arcade font-bold text-xs">🪙 ${item.price}</button>`
+                }
+              </div>
+            </div>
+          `;
+        }).join('');
+      },
+
+      buyShopItem(id) {
+        const item = SHOP_CATALOG.find(i => i.id === id);
+        if (!item) return;
+        if (StorageManager.state.coins < item.price) {
+          this.showToast('Not enough coins! Play mini-games to earn more.', 'rose');
+          SoundFX.play('hit');
+          return;
+        }
+        StorageManager.state.coins -= item.price;
+        StorageManager.state.unlockedSkins.push(item.id);
+        StorageManager.state.equippedSkins[item.category] = item.id;
+        StorageManager.checkAchievements();
+        StorageManager.save();
+        SoundFX.play('win');
+        this.showToast(`Unlocked & Equipped ${item.name}!`, 'cyan');
+        this.renderShop();
+      },
+
+      equipShopItem(id) {
+        const item = SHOP_CATALOG.find(i => i.id === id);
+        if (!item) return;
+        StorageManager.state.equippedSkins[item.category] = item.id;
+        StorageManager.save();
+        SoundFX.play('click');
+        this.renderShop();
+      },
+
+      renderStatsModal() {
+        const achGrid = document.getElementById('achievementsGrid');
+        achGrid.innerHTML = ACHIEVEMENTS_LIST.map(a => {
+          const done = StorageManager.state.achievements.includes(a.id);
+          return `
+            <div class="p-3 rounded-2xl border ${done ? 'bg-amber-500/10 border-amber-400/40' : 'bg-slate-900/70 border-slate-800 opacity-60'} flex items-center gap-3">
+              <span class="text-2xl">${a.icon}</span>
+              <div class="flex-1">
+                <div class="text-xs font-bold text-white">${a.title}</div>
+                <div class="text-[11px] text-slate-400">${a.desc}</div>
+              </div>
+              <span class="text-xs font-arcade font-bold ${done ? 'text-emerald-400' : 'text-amber-300'}">
+                ${done ? '✓' : `+${a.reward}🪙`}
+              </span>
+            </div>
+          `;
+        }).join('');
+
+        const hsList = document.getElementById('highScoresList');
+        hsList.innerHTML = GAMES_CATALOG.map(g => {
+          const best = StorageManager.state.highScores[g.id] || 0;
+          return `
+            <div class="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-xs">
+              <span class="flex items-center gap-2 text-slate-200"><span>${g.icon}</span> ${g.title}</span>
+              <span class="font-arcade font-bold text-cyan-300">${best}</span>
+            </div>
+          `;
+        }).join('');
+      },
+
+      renderProfileModal() {
+        const s = StorageManager.state;
+        document.getElementById('profileAvatarBig').textContent = s.profile.avatar;
+        document.getElementById('profileNameInput').value = s.profile.name;
+        document.getElementById('profileLevelText').textContent = `Level ${s.profile.level}`;
+        const pct = Math.min(100, Math.round((s.profile.xp / (s.profile.level * 150)) * 100));
+        document.getElementById('profileXpBar').style.width = `${pct}%`;
+        document.getElementById('profileTotalCoins').textContent = s.totalCoinsEarned;
+        document.getElementById('profileTotalGames').textContent = s.totalMatches;
+
+        const avatars = ['👾', '🤖', '🦊', '🐉', '🚀', '👑', '⚡', '🥷'];
+        document.getElementById('avatarPicker').innerHTML = avatars.map(av => `
+          <button onclick="App.selectAvatar('${av}')" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-xl flex items-center justify-center border ${s.profile.avatar === av ? 'border-cyan-400' : 'border-transparent'}">
+            ${av}
+          </button>
+        `).join('');
+      },
+
+      selectAvatar(av) {
+        StorageManager.state.profile.avatar = av;
+        document.getElementById('profileAvatarBig').textContent = av;
+        this.renderProfileModal();
+      },
+
+      saveProfile() {
+        const val = document.getElementById('profileNameInput').value.trim();
+        if (val) StorageManager.state.profile.name = val;
+        StorageManager.save();
+        this.closeModals();
+        this.showToast('Profile updated!', 'cyan');
+      },
+
+      showToast(msg, tone = 'cyan') {
+        const container = document.getElementById('toastContainer');
+        const el = document.createElement('div');
+        const border = tone === 'gold' ? 'border-amber-400/60 text-amber-200' :
+                       tone === 'rose' ? 'border-rose-400/60 text-rose-200' :
+                       'border-cyan-400/60 text-cyan-200';
+        el.className = `toast-enter glass-panel border ${border} rounded-2xl px-4 py-3 text-xs font-bold shadow-xl`;
+        el.textContent = msg;
+        container.appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = '0';
+          el.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => el.remove(), 300);
+        }, 3200);
+      },
+
+      initBackgroundAnimation() {
+        const bg = document.getElementById('bgCanvas');
+        const bctx = bg.getContext('2d');
+        const particles = Array.from({ length: 42 }, () => ({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          r: 1 + Math.random() * 2.2,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          c: Math.random() > 0.5 ? 'rgba(0, 240, 255, 0.35)' : 'rgba(236, 72, 153, 0.3)'
+        }));
+
+        const resizeBg = () => {
+          bg.width = window.innerWidth;
+          bg.height = window.innerHeight;
+        };
+        resizeBg();
+        window.addEventListener('resize', resizeBg);
+
+        const renderBg = () => {
+          bctx.clearRect(0, 0, bg.width, bg.height);
+          for (const p of particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0) p.x = bg.width;
+            if (p.x > bg.width) p.x = 0;
+            if (p.y < 0) p.y = bg.height;
+            if (p.y > bg.height) p.y = 0;
+
+            bctx.fillStyle = p.c;
+            bctx.beginPath();
+            bctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            bctx.fill();
+          }
+          requestAnimationFrame(renderBg);
+        };
+        renderBg();
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>
